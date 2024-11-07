@@ -21,6 +21,11 @@
 ### 可直接下載封裝好的，解壓縮後即可使用
 https://github.com/fred-lede/ollama-webui/releases
 
+### 使用介面
+![1](https://github.com/user-attachments/assets/e45f43d0-0767-4713-a0ae-c6bc673d751e)
+
+![2](https://github.com/user-attachments/assets/311d588d-45b5-48ff-92a2-1facad868dc4)
+
 ### 採用源碼的
 1. `pip install virtualenv`
 2. `virtualenv -p python3.10.11 myenv`
