@@ -1,0 +1,31 @@
+{
+    "llm_parameters": [
+        {
+            "llm_temperature": 0.8,
+            "llm_max_tokens": 2048,
+            "llm_top_p": 0.9,
+            "llm_typical_p": 0.7,
+            "llm_num_ctx": 2048
+        }
+    ],
+    "hosts": [
+        {
+            "server_name": "Localhost",
+            "address": "http://127.0.0.1",
+            "port": 11434,
+            "default": false
+        },
+        {
+            "server_name": "H+",
+            "address": "http://10.110.140.226",
+            "port": 11434,
+            "default": false
+        },
+        {
+            "server_name": "VICTUS",
+            "address": "http://192.168.1.62",
+            "port": 11434,
+            "default": true
+        }
+    ]
+}
