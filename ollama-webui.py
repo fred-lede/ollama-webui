@@ -16,6 +16,14 @@ css = """
 }
 """
 
+css_chatbox = """
+.answer_output .message { 
+    font-size: 10px !important;  
+    font-weight: normal !important; 
+}
+"""
+
+
 # 設定日誌紀錄
 logging.basicConfig(
     filename='log-webui.log',
@@ -287,7 +295,8 @@ def ask_question_stream(question, history, model, selected_server, llm_temperatu
 
         response = requests.post(url, headers=headers, json=payload, stream=True)
         response.raise_for_status()
-
+        # 初始化 assistant_message，並在開頭添加 "Assistant:<br>"解決markdown格式問題
+        assistant_message['content'] = "▼<br>"
         for line in response.iter_lines():
             if stop_event.is_set():
                 logging.info("收到停止信號，停止回應。")
@@ -298,7 +307,7 @@ def ask_question_stream(question, history, model, selected_server, llm_temperatu
                     data = json.loads(line.decode('utf-8'))
                     content = data.get("message", {}).get("content", "")
                     if content:
-                        assistant_message['content'] += content
+                        assistant_message['content'] += content.replace("\n", "  <br>")   # "  <br>"解決markdown格式問題
                         new_messages[-1]['content'] = assistant_message['content']
                         # Yield only the latest message
                         yield new_messages[-1]  # Yield the new assistant message
@@ -556,8 +565,10 @@ with gr.Blocks(css=css, theme=gr.themes.Default()) as demo:
                                 chatbot = chatbot,
                                 autofocus = False,
                                 show_progress = "full",
+                                css=css_chatbox,
                                 textbox = question_input
                             )
+                       
                         
     # 綁定新增伺服器按鈕事件
     add_server_button.click(
