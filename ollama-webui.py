@@ -295,8 +295,9 @@ def ask_question_stream(question, history, model, selected_server, llm_temperatu
 
         response = requests.post(url, headers=headers, json=payload, stream=True)
         response.raise_for_status()
+        
         # 初始化 assistant_message，並在開頭添加 "Assistant:<br>"解決markdown格式問題
-        assistant_message['content'] = "▼<br>"
+        # assistant_message['content'] = "▼\n"    # Gradio 5.6.0換行正常，不需處理
         for line in response.iter_lines():
             if stop_event.is_set():
                 logging.info("收到停止信號，停止回應。")
@@ -307,7 +308,8 @@ def ask_question_stream(question, history, model, selected_server, llm_temperatu
                     data = json.loads(line.decode('utf-8'))
                     content = data.get("message", {}).get("content", "")
                     if content:
-                        assistant_message['content'] += content.replace("\n", "  <br>")   # "  <br>"解決markdown格式問題
+                        #assistant_message['content'] += content.replace("\n", "  \n")
+                        assistant_message['content'] += content     # Gradio 5.6.0換行正常，不需處理
                         new_messages[-1]['content'] = assistant_message['content']
                         # Yield only the latest message
                         yield new_messages[-1]  # Yield the new assistant message
@@ -424,7 +426,7 @@ chatbot = gr.Chatbot(
         )
 
 # 定義 Gradio 介面
-with gr.Blocks(css=css, theme=gr.themes.Default()) as demo:
+with gr.Blocks(css=css, theme=gr.themes.Default(), title="Ollama WebUI") as demo:
     gr.Markdown("# Ollama WebUI")
     with gr.Tabs(selected="Chatbot") as tabs:  # 指定程式啟動時的默認標籤頁
         #定義setting標籤頁
