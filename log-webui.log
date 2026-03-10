@@ -1,0 +1,178 @@
+2026-03-10 14:11:40,443:INFO:Loaded 4 hosts.
+2026-03-10 14:11:40,444:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 14:11:44,217:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 14:11:45,684:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:11:46,224:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:14:03,034:INFO:Loaded 4 hosts.
+2026-03-10 14:14:03,204:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 14:14:03,256:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 14:14:06,708:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:14:07,204:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:21:47,263:INFO:Loaded 4 hosts.
+2026-03-10 14:21:47,267:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 14:21:47,328:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 14:21:47,691:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:21:47,939:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:21:48,128:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:21:48,458:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:21:48,990:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 14:21:49,059:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 14:21:50,309:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 14:23:13,943:INFO:Loaded 4 hosts.
+2026-03-10 14:23:13,943:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 14:23:17,282:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 14:23:18,165:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 14:23:18,209:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 14:23:18,654:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:23:18,657:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:23:18,685:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 14:23:19,127:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:23:19,131:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:25:12,755:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 14:25:17,119:INFO:Assistant response done.
+2026-03-10 14:25:45,212:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 14:27:19,334:INFO:Assistant response done.
+2026-03-10 14:43:02,772:INFO:Loaded 4 hosts.
+2026-03-10 14:43:02,772:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 14:43:06,117:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 14:43:07,177:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 14:43:07,225:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 14:43:07,589:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:43:07,599:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 14:43:07,662:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 14:43:08,016:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 14:43:08,038:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 15:00:46,810:INFO:Loaded 4 hosts.
+2026-03-10 15:00:46,811:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 15:00:46,897:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 15:00:48,579:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 15:00:48,641:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 15:00:50,323:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 15:00:50,327:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 15:00:50,333:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 15:00:50,818:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 15:00:50,824:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 15:01:31,742:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 15:02:54,299:INFO:Response stopped by user.
+2026-03-10 15:02:54,302:INFO:Assistant response done.
+2026-03-10 16:50:22,284:INFO:Loaded 4 hosts.
+2026-03-10 16:50:22,284:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 16:50:22,632:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 16:50:23,328:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 16:50:23,361:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 16:50:23,966:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 16:50:23,966:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 16:50:23,981:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 16:50:24,455:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 16:50:24,505:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 16:52:01,717:WARNING:Web search skipped: Web search failed (tavily): TAVILY_API_KEY is not set
+2026-03-10 16:52:01,717:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 16:54:49,292:INFO:Assistant response done.
+2026-03-10 17:15:49,048:INFO:Loaded 4 hosts.
+2026-03-10 17:15:49,048:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 17:15:49,090:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 17:15:50,674:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 17:15:50,723:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 17:15:52,473:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:15:52,476:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 17:15:52,492:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:15:52,935:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:15:52,970:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:17:44,165:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 17:19:38,173:INFO:Assistant response done.
+2026-03-10 17:20:31,383:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 17:22:38,468:INFO:Assistant response done.
+2026-03-10 17:27:30,501:INFO:Loaded 4 hosts.
+2026-03-10 17:27:30,501:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 17:27:33,810:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 17:27:34,598:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 17:27:34,630:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 17:27:35,288:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:27:35,290:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 17:27:35,292:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:27:35,686:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:27:35,701:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:28:30,459:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 17:30:21,288:INFO:Assistant response done.
+2026-03-10 17:33:27,209:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 17:34:50,314:INFO:Loaded 4 hosts.
+2026-03-10 17:34:50,323:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 17:34:50,588:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 17:34:51,705:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 17:34:51,739:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 17:34:54,521:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 17:34:54,524:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:34:54,536:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:34:54,854:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:34:54,891:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:35:44,347:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 17:37:01,922:INFO:Assistant response done.
+2026-03-10 17:39:20,647:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 17:40:53,446:INFO:Assistant response done.
+2026-03-10 17:46:04,956:INFO:Loaded 4 hosts.
+2026-03-10 17:46:04,960:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 17:46:05,017:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 17:46:05,378:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:46:05,441:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:46:05,788:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:46:05,822:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 17:46:05,870:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 17:46:05,954:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:46:06,305:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 17:58:10,218:INFO:Loaded 4 hosts.
+2026-03-10 17:58:10,218:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 17:58:10,275:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 17:58:10,622:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:58:10,731:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:58:11,018:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:58:11,195:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 17:58:11,238:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 17:58:11,272:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:58:11,627:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 17:58:48,360:INFO:Loaded 4 hosts.
+2026-03-10 17:58:48,362:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 17:58:48,420:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 17:58:49,639:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 17:58:49,786:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 17:58:51,884:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:58:51,900:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 17:58:51,930:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 17:58:52,292:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 17:58:52,314:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 18:06:12,396:INFO:Loaded 4 hosts.
+2026-03-10 18:06:12,396:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 18:06:12,479:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 18:06:12,938:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 18:06:13,097:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 18:06:13,272:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 18:06:13,642:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 18:06:14,514:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 18:06:14,614:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 18:06:15,174:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 18:16:20,550:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3.5:27b
+2026-03-10 18:18:08,338:INFO:Assistant response done.
+2026-03-10 18:18:29,228:INFO:Loaded 4 hosts.
+2026-03-10 18:18:29,228:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 18:18:29,293:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 18:18:30,209:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 18:18:30,243:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 18:18:32,703:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 18:18:32,707:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 18:18:32,722:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 18:18:33,148:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 18:18:33,160:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 18:28:05,245:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=glm-ocr:q8_0
+2026-03-10 18:28:11,185:ERROR:Chat request failed: 500 Server Error: Internal Server Error for url: http://dreamcloud.myds.me:11200/api/chat
+2026-03-10 18:28:35,225:INFO:Chat request => http://dreamcloud.myds.me:11200/api/chat, model=qwen3-vl:8b
+2026-03-10 18:29:49,307:INFO:Response stopped by user.
+2026-03-10 18:29:49,332:INFO:Assistant response done.
+2026-03-10 18:30:08,672:INFO:Loaded 4 hosts.
+2026-03-10 18:30:08,672:INFO:Fetching models from http://dreamcloud.myds.me:11200/v1/models
+2026-03-10 18:30:08,704:INFO:Models from http://dreamcloud.myds.me:11200 => ['qwen3.5:27b', 'qwen3.5:9b', 'qwen3.5:0.8b', 'translategemma:12b', 'qwen3.5:35b', 'glm-ocr:q8_0', 'glm-ocr:bf16', 'ministral-3:14b', 'llama3.1:8b', 'glm-4.7-flash:q4_K_M', 'translategemma:27b', 'translategemma:4b', 'nomic-embed-text-v2-moe:latest', 'deepseek-ocr:3b', 'gpt-oss:120b', 'embeddinggemma:300m', 'gpt-oss-safeguard:20b', 'qwen3-embedding:8b', 'qwen3-vl:30b', 'qwen3-vl:8b', 'xitao/bge-reranker-v2-m3:latest', 'dengcao/Qwen3-Reranker-4B:Q5_K_M', 'dengcao/Qwen3-Reranker-8B:F16', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.2-vision:11b', 'deepseek-r1-extra-ctx:8b', 'deepseek-r1:8b', 'mxbai-embed-large:335m', 'gemma3:4b', 'gemma3:1b', 'gemma3:27b', 'gemma3:12b', 'deepseek-r1-extra-ctx:14b', 'deepseek-r1:70b', 'deepseek-r1:32b', 'mxbai-embed-large:latest', 'nomic-embed-text:latest', 'deepseek-r1:14b']
+2026-03-10 18:30:09,519:INFO:HTTP Request: GET http://127.0.0.1:7860/gradio_api/startup-events "HTTP/1.1 200 OK"
+2026-03-10 18:30:09,579:INFO:HTTP Request: HEAD http://127.0.0.1:7860/ "HTTP/1.1 200 OK"
+2026-03-10 18:30:10,036:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-launched-telemetry "HTTP/1.1 200 OK"
+2026-03-10 18:30:10,038:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 18:30:10,052:INFO:HTTP Request: HEAD https://huggingface.co/api/telemetry/https%3A/api.gradio.app/gradio-initiated-analytics "HTTP/1.1 200 OK"
+2026-03-10 18:30:10,587:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"
+2026-03-10 18:30:10,600:INFO:HTTP Request: GET https://api.gradio.app/pkg-version "HTTP/1.1 200 OK"

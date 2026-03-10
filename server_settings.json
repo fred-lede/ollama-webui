@@ -21,11 +21,17 @@
             "port": 11434,
             "default": false
         },
+		{
+            "server_name": "UM890-Pro",
+            "address": "http://dreamcloud.myds.me",
+            "port": 11200,
+            "default": true
+        },
         {
             "server_name": "VICTUS",
             "address": "http://192.168.1.62",
             "port": 11434,
-            "default": true
+            "default": false
         }
     ]
 }
