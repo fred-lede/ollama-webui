@@ -34,6 +34,7 @@ from app.orchestrator.model_runtime import (
     build_fetch_summary_prompt,
     build_search_summary_prompt,
 )
+from app.orchestrator.conversation_pipeline import run_legacy_conversation_stream
 from app.core.tool_router import ToolRouter
 from app.tools import build_default_registry
 
@@ -607,23 +608,6 @@ def ask_question_stream(
             yield new_messages[-1], "Completed"
             return
 
-        if bool(web_search_enabled) and user_text.strip():
-            web_context, web_error, web_refs = _build_web_context(user_text, search_provider, search_num_results)
-            if web_context:
-                prompt += (
-                    "\n\n" + web_context + "\n\n"
-                    "Instruction: Base your answer on the web search digest and cite source indices like [1], [2]."
-                )
-            elif web_error:
-                logging.warning("Web search failed while enabled: %s", web_error)
-                assistant_message["content"] = (
-                    "網路搜尋已開啟，但搜尋失敗：" + str(web_error) + "。\n"
-                    "請確認已設定對應 API Key（Serper: SERPER_API_KEY / Tavily: TAVILY_API_KEY），"
-                    "再重新送出問題。"
-                )
-                yield new_messages[-1], "Web search failed"
-                return
-
         if len(question.get("files", [])) > 0:
             file_path = question["files"][0]
             try:
@@ -635,129 +619,32 @@ def ask_question_stream(
                 image_payload = {}
         else:
             image_payload = {}
-
-        # 2) First model call: decide if tool is needed
-        tool_instruction = _build_tool_instruction()
-        first_prompt = tool_instruction + "\n\n" + prompt
-        first_message = {"role": "user", "content": first_prompt}
-        if image_payload:
-            first_message.update(image_payload)
-
-        first_payload = {
-            "model": model,
-            "messages": [first_message],
-            "options": options,
-            "stream": False,
-        }
-
-        yield new_messages[-1], "Thinking: tool decision"
-        try:
-            first_response_text = _post_chat_once(url, headers, first_payload)
-        except requests.RequestException as exc:
-            logging.warning("Tool decision request failed, fallback to plain chat: %s", exc)
-            yield new_messages[-1], "Tool decision failed, fallback to normal chat"
-
-            fallback_payloads = _build_fallback_payloads(
-                model=model,
-                prompt=prompt,
-                user_text=user_text,
-                options=options,
-                image_payload=image_payload,
-            )
-
-            fallback_error: requests.RequestException | None = None
-            for attempt_name, fallback_payload in fallback_payloads:
-                try:
-                    if assistant_message["content"]:
-                        assistant_message["content"] = ""
-                        new_messages[-1]["content"] = ""
-
-                    logging.info("Fallback chat attempt: %s", attempt_name)
-                    for chunk in _stream_chat(url, headers, fallback_payload):
-                        ensure_not_stopped()
-                        assistant_message["content"] += chunk
-                        new_messages[-1]["content"] = assistant_message["content"]
-                        yield new_messages[-1], f"Generating answer ({attempt_name})"
-                        time.sleep(0.02)
-
-                    if assistant_message["content"].strip():
-                        fallback_error = None
-                        break
-                except requests.RequestException as retry_exc:
-                    fallback_error = retry_exc
-                    logging.warning("Fallback chat attempt failed (%s): %s", attempt_name, retry_exc)
-
-            if fallback_error is not None and not assistant_message["content"].strip():
-                raise fallback_error
-
-            if assistant_message["content"] and web_refs:
-                linked = _linkify_reference_markers(assistant_message["content"], web_refs)
-                linked_with_sources = _append_source_links(linked, web_refs)
-                if linked_with_sources != assistant_message["content"]:
-                    assistant_message["content"] = linked_with_sources
-                    new_messages[-1]["content"] = linked_with_sources
-
-            if not assistant_message["content"].strip():
-                assistant_message["content"] = f"Server request failed: {exc}"
-                new_messages[-1]["content"] = assistant_message["content"]
-                yield new_messages[-1], f"Error: {exc}"
-                return
-
-            yield new_messages[-1], "Completed (fallback)"
-            return
-
-        extracted = tool_router.extract_tool_call(first_response_text)
-
-        # 3) No tool call => return normal answer
-        if extracted is None:
-            clean_text = tool_router.remove_tool_call_markup(first_response_text)
-            if not clean_text:
-                clean_text = first_response_text.strip() or "(empty response)"
-
-            assistant_message["content"] = clean_text
-            if assistant_message["content"] and web_refs:
-                linked = _linkify_reference_markers(assistant_message["content"], web_refs)
-                assistant_message["content"] = _append_source_links(linked, web_refs)
-
-            new_messages[-1]["content"] = assistant_message["content"]
-            yield new_messages[-1], "Completed"
-            return
-
-        # 4) Tool execution
-        yield new_messages[-1], f"Running tool: {extracted.get('name')}"
-        tool_result = tool_router.execute_tool_call(extracted)
-
-        # 5) Second model call: final answer from tool result
-        second_prompt = (
-            prompt
-            + "\n\nTool call response:\n"
-            + json.dumps(tool_result, ensure_ascii=False, indent=2)
-            + "\n\nPlease explain the result to the user in natural language."
+        yield from run_legacy_conversation_stream(
+            question=question,
+            history=history,
+            user_text=user_text,
+            model=model,
+            search_provider=search_provider,
+            web_search_enabled=bool(web_search_enabled),
+            search_num_results=search_num_results,
+            url=url,
+            headers=headers,
+            options=options,
+            assistant_message=assistant_message,
+            new_messages=new_messages,
+            ensure_not_stopped=ensure_not_stopped,
+            build_web_context=_build_web_context,
+            build_history_prompt=_build_history_prompt,
+            build_tool_instruction=_build_tool_instruction,
+            build_fallback_payloads=_build_fallback_payloads,
+            stream_chat=_stream_chat,
+            post_chat_once=_post_chat_once,
+            linkify_reference_markers=_linkify_reference_markers,
+            append_source_links=_append_source_links,
+            tool_router=tool_router,
+            image_payload=image_payload,
         )
-
-        second_payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": second_prompt}],
-            "options": options,
-            "stream": True,
-        }
-
-        yield new_messages[-1], "Generating final answer"
-        for chunk in _stream_chat(url, headers, second_payload):
-            ensure_not_stopped()
-            assistant_message["content"] += chunk
-            new_messages[-1]["content"] = assistant_message["content"]
-            yield new_messages[-1], "Generating final answer"
-            time.sleep(0.02)
-
-        if assistant_message["content"] and web_refs:
-            linked = _linkify_reference_markers(assistant_message["content"], web_refs)
-            linked_with_sources = _append_source_links(linked, web_refs)
-            if linked_with_sources != assistant_message["content"]:
-                assistant_message["content"] = linked_with_sources
-                new_messages[-1]["content"] = linked_with_sources
-
-        yield new_messages[-1], "Completed"
+        return
     except requests.RequestException as exc:
         logging.error("Chat request failed: %s", exc)
         assistant_message["content"] = f"Server request failed: {exc}"
