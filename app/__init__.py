@@ -1,1 +1,1 @@
-﻿"""Application package for ollama-webui."""
+"""Application package for ollama-webui."""

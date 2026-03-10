@@ -1,43 +1,57 @@
-
-# 使用Gradio在Windows與本地或遠端的Ollama進行聊天
+# Ollama WebUI（Gradio）
 
 中文 | [English](./README_en.md)
 
-## 功能
+## 專案說明
+本專案提供一個以 Gradio 建立的 Ollama WebUI，可連線本地或遠端 Ollama 伺服器，支援一般聊天、影像提問、搜尋與工具整合。
 
-- 介面語言有中文、英文及泰文，用戶也可以自行增加或減少，有需要的可修改language_settings.json檔案，但務必維持內容格式。
-- 本地或遠端的Ollama服務會存放在server_settings.json檔案，在使用者介面是以選單選取，程式會自動抓取該主機Ollama可提供的模型，用戶依需求選擇使用，但此程式僅支持語言模型。
-- 在設定的頁面可以增加Ollama的服務主機，但目前不提供編輯及修改，請直接編輯server_settings.json檔案。
-- 設定頁面也提供Temperature, Num Predict(Max Tokens), Top_p, Typical_p, Num CTX模型參數設定。
-- 虛擬助手頁面為聊天介面，如果選擇的模型提供Vision功能，則可上傳圖面來問答。
+## 主要功能
+- 多語系 UI（預設含中文、英文、泰文，可透過 `language_settings.json` 擴充）
+- 多主機管理（從 `server_settings.json` 讀取，UI 可新增主機）
+- 模型參數設定（`Temperature`、`Max Tokens`、`Top P`、`Typical P`、`Num CTX`）
+- Web Search（Serper.dev / Tavily）
+- 搜尋設定：`Search Results Count`（1~20）與 `Search Summary Length`（short/medium/long）
+- 內建工具：
+  - `datetime`
+  - `calculator`
+  - `fetch_url`
+  - `web_search`
+- 支援手動工具命令：
+  - `/tools`
+  - `/tool <name> <json-args>`
+- 「停止回答」可中止串流與多數工具流程
+- 「清除回答」會同步清空畫面與對話歷史
 
-## 環境要求
-- Windows 10/11
-- Python 3.10.11(我開發的環境)
-- Gradio 5.1.0(我使用的版本)
+## 設定檔
+- `server_settings.json`
+  - `hosts`: Ollama 主機清單
+  - `llm_parameters`: 預設模型參數（會與 UI 同步）
+- `app_settings.json`
+  - `search.provider`
+  - `search.num_results`
+  - `search.summary_length`
+  - `search.tavily_api_key` / `search.serper_api_key`
+  - `search.tavily_api_url` / `search.serper_api_url`
 
-## 安裝和運行
+## 環境需求
+- Python 3.10+（建議）
+- 相依套件請以 `requirements.txt` 為準
 
-### 可直接下載封裝好的，解壓縮後即可使用
-https://github.com/fred-lede/ollama-webui/releases
+## 安裝與執行
+1. 建立虛擬環境（可選）
+2. 安裝套件：
+   `pip install -r requirements.txt`
+3. 啟動：
+   `python ollama-webui.py`
 
-### 使用介面
-![1](https://github.com/user-attachments/assets/e45f43d0-0767-4713-a0ae-c6bc673d751e)
+## 常見操作
+- 切換/新增 Ollama 主機：右側設定面板 > `Server`
+- 調整搜尋與摘要長度：右側設定面板 > `Search`
+- 調整 LLM 參數並寫回檔案：右側設定面板 > `Advanced` > `Save LLM Settings`
 
-![2](https://github.com/user-attachments/assets/311d588d-45b5-48ff-92a2-1facad868dc4)
+## 參考文件
+- 英文說明：[README_en.md](./README_en.md)
+- 跨電腦接手流程：[HANDOFF.md](./HANDOFF.md)
 
-### 採用源碼的
-1. `pip install virtualenv`
-2. `virtualenv -p python3.10.11 myenv`
-3. `myenv\scripts\activate`
-4. 克隆或下載本項目代碼 https://github.com/fred-lede/ollama-webui.git 
-5. 安裝依賴庫 `pip install -r requirements.txt`
-6. 運行程序 `python ollama-webui.py`
-
-## 貢獻者
-
-- Fred
-
-## 許可證
-
-本項目採用 [MIT License](LICENSE) 進行許可。
+## 授權
+本專案採用 [MIT License](LICENSE)。

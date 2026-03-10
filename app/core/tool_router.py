@@ -1,9 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import re
 from typing import Any
 
+from app.core.cancellation import OperationCancelled
 from app.tools.registry import ToolRegistry
 
 _TOOL_CALL_PATTERN = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
@@ -72,6 +73,8 @@ class ToolRouter:
                 "tool_name": name,
                 "result": result,
             }
+        except OperationCancelled:
+            raise
         except Exception as exc:  # noqa: BLE001
             return {
                 "ok": False,

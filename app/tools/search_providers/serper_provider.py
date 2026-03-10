@@ -1,10 +1,11 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 
 import requests
 
 from app.core.app_settings import load_app_settings
+from app.core.cancellation import ensure_not_stopped
 from app.tools.search_providers.base import SearchProvider, SearchResult
 
 
@@ -20,6 +21,7 @@ class SerperProvider(SearchProvider):
         )
 
     def search(self, query: str, num_results: int = 5) -> list[SearchResult]:
+        ensure_not_stopped()
         if not self.api_key:
             raise ValueError("SERPER_API_KEY is not set")
 
@@ -29,17 +31,19 @@ class SerperProvider(SearchProvider):
         }
         payload = {
             "q": query,
-            "num": max(1, min(int(num_results), 10)),
+            "num": max(1, min(int(num_results), 20)),
         }
 
         response = requests.post(self.endpoint, headers=headers, json=payload, timeout=self.timeout)
         response.raise_for_status()
+        ensure_not_stopped()
 
         body = response.json()
         organic = body.get("organic", [])
 
         results: list[SearchResult] = []
         for item in organic:
+            ensure_not_stopped()
             title = str(item.get("title", "")).strip()
             url = str(item.get("link", "")).strip()
             snippet = str(item.get("snippet", "")).strip()

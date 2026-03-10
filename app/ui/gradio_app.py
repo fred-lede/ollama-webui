@@ -1,9 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import gradio as gr
 
 from app.core.app_settings import load_app_settings, save_app_settings
-from app.core.config import load_language_settings, load_settings
+from app.core.config import load_language_settings, load_llm_parameters, load_settings, save_llm_parameters
 from app.services.chat_service import ask_question_stream, send_prompt, stop_response
 from app.services.server_service import fetch_models, handle_add_server, handle_server_change
 
@@ -18,6 +18,22 @@ css = """
 """
 
 
+def _clamp_float(value: float | int | str, minimum: float, maximum: float, default: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
+
+
+def _clamp_int(value: float | int | str, minimum: int, maximum: int, default: int) -> int:
+    try:
+        parsed = int(float(value))
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
+
+
 def _normalize_provider(value: str) -> str:
     v = (value or "").strip().lower()
     if v in {"serper", "serper.dev", "serper_dev"}:
@@ -25,6 +41,13 @@ def _normalize_provider(value: str) -> str:
     if v == "tavily":
         return "tavily"
     return "serper.dev"
+
+
+def _normalize_summary_length(value: str) -> str:
+    v = (value or "").strip().lower()
+    if v in {"short", "medium", "long"}:
+        return v
+    return "medium"
 
 
 def build_demo() -> gr.Blocks:
@@ -37,7 +60,14 @@ def build_demo() -> gr.Blocks:
     default_search_provider = _normalize_provider(str(search_cfg.get("provider", "serper.dev")))
     default_tavily_api_key = str(search_cfg.get("tavily_api_key", ""))
     default_serper_api_key = str(search_cfg.get("serper_api_key", ""))
-    default_search_num_results = int(search_cfg.get("num_results", 5) or 5)
+    default_search_num_results = _clamp_int(search_cfg.get("num_results", 5), 1, 20, 5)
+    default_search_summary_length = _normalize_summary_length(str(search_cfg.get("summary_length", "medium")))
+    llm_defaults = load_llm_parameters()
+    default_llm_temperature = _clamp_float(llm_defaults.get("llm_temperature", 0.8), 0.0, 1.0, 0.8)
+    default_llm_max_tokens = _clamp_int(llm_defaults.get("llm_max_tokens", 2048), 1, 131072, 2048)
+    default_llm_top_p = _clamp_float(llm_defaults.get("llm_top_p", 0.9), 0.0, 1.0, 0.9)
+    default_llm_typical_p = _clamp_float(llm_defaults.get("llm_typical_p", 0.7), 0.0, 1.0, 0.7)
+    default_llm_num_ctx = _clamp_int(llm_defaults.get("llm_num_ctx", 2048), 1, 131072, 2048)
 
     hosts, default_host = load_settings()
     server_choices = [(host["server_name"], f"{host['address']}:{host['port']}") for host in hosts]
@@ -66,19 +96,24 @@ def build_demo() -> gr.Blocks:
             gr.update(value=label, variant=variant),
         )
 
-    def save_search_settings_ui(provider: str, tavily_key: str, serper_key: str, num_results: float):
+    def save_search_settings_ui(
+        provider: str,
+        tavily_key: str,
+        serper_key: str,
+        num_results: float,
+        summary_length: str,
+    ):
         existing = load_app_settings()
         existing_search = existing.get("search", {}) if isinstance(existing.get("search", {}), dict) else {}
 
-        try:
-            num = int(num_results)
-        except (TypeError, ValueError):
-            num = 5
-        num = max(1, min(num, 10))
+        num = _clamp_int(num_results, 1, 20, 5)
+        normalized_summary_length = _normalize_summary_length(summary_length)
+        normalized_provider = _normalize_provider(provider)
 
         existing["search"] = {
-            "provider": _normalize_provider(provider),
+            "provider": normalized_provider,
             "num_results": num,
+            "summary_length": normalized_summary_length,
             "tavily_api_key": tavily_key.strip(),
             "serper_api_key": serper_key.strip(),
             "tavily_api_url": str(existing_search.get("tavily_api_url", "https://api.tavily.com/search")),
@@ -87,8 +122,68 @@ def build_demo() -> gr.Blocks:
 
         ok = save_app_settings(existing)
         if ok:
-            return "搜尋設定已儲存。"
-        return "搜尋設定儲存失敗。"
+            return (
+                "搜尋設定已儲存。",
+                gr.update(value=normalized_provider),
+                gr.update(value=num),
+                gr.update(value=normalized_summary_length),
+                normalized_provider,
+                num,
+                normalized_summary_length,
+            )
+        return (
+            "搜尋設定儲存失敗。",
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            normalized_provider,
+            num,
+            normalized_summary_length,
+        )
+
+    def save_llm_settings_ui(
+        temperature: float,
+        max_tokens: float,
+        top_p: float,
+        typical_p: float,
+        num_ctx: float,
+    ):
+        payload = {
+            "llm_temperature": _clamp_float(temperature, 0.0, 1.0, default_llm_temperature),
+            "llm_max_tokens": _clamp_int(max_tokens, 1, 131072, default_llm_max_tokens),
+            "llm_top_p": _clamp_float(top_p, 0.0, 1.0, default_llm_top_p),
+            "llm_typical_p": _clamp_float(typical_p, 0.0, 1.0, default_llm_typical_p),
+            "llm_num_ctx": _clamp_int(num_ctx, 1, 131072, default_llm_num_ctx),
+        }
+
+        ok = save_llm_parameters(payload)
+        if ok:
+            return (
+                "LLM 參數已儲存到 server_settings.json。",
+                gr.update(value=payload["llm_temperature"]),
+                gr.update(value=payload["llm_max_tokens"]),
+                gr.update(value=payload["llm_top_p"]),
+                gr.update(value=payload["llm_typical_p"]),
+                gr.update(value=payload["llm_num_ctx"]),
+                payload["llm_temperature"],
+                payload["llm_max_tokens"],
+                payload["llm_top_p"],
+                payload["llm_typical_p"],
+                payload["llm_num_ctx"],
+            )
+        return (
+            "LLM 參數儲存失敗。",
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+        )
 
     with gr.Blocks() as demo:
         gr.Markdown("# Ollama WebUI")
@@ -96,6 +191,7 @@ def build_demo() -> gr.Blocks:
         settings_open_state = gr.Checkbox(value=False, visible=False)
         search_provider_state = gr.State(default_search_provider)
         search_num_results_state = gr.State(default_search_num_results)
+        search_summary_length_state = gr.State(default_search_summary_length)
 
         with gr.Row(equal_height=False):
             with gr.Column(scale=9):
@@ -135,8 +231,7 @@ def build_demo() -> gr.Blocks:
 
                 with gr.Row():
                     stop_button = gr.Button(value=translations.get("stop_button", "Stop Answer"), elem_classes="my-button")
-                    clean_answer_button = gr.ClearButton(
-                        chatbot,
+                    clean_answer_button = gr.Button(
                         value=translations.get("clean_answer_button", "Clear Answer"),
                         elem_classes="my-button",
                     )
@@ -155,15 +250,26 @@ def build_demo() -> gr.Blocks:
                     0,
                     1,
                     step=0.1,
-                    value=0.5,
+                    value=default_llm_temperature,
                     label="Temperature",
                     info="Choose between 0 and 1",
                     interactive=True,
                     visible=False,
                 )
-                llm_max_tokens = gr.Number(label="Max Tokens", interactive=True, value=1500, visible=False)
+                llm_max_tokens = gr.Number(label="Max Tokens", interactive=True, value=default_llm_max_tokens, visible=False)
+                llm_top_p = gr.Slider(0, 1, step=0.05, value=default_llm_top_p, label="Top P", interactive=True, visible=False)
+                llm_typical_p = gr.Slider(
+                    0,
+                    1,
+                    step=0.05,
+                    value=default_llm_typical_p,
+                    label="Typical P",
+                    interactive=True,
+                    visible=False,
+                )
+                llm_num_ctx = gr.Number(label="Num CTX", interactive=True, value=default_llm_num_ctx, visible=False)
 
-                gr.ChatInterface(
+                chat_interface = gr.ChatInterface(
                     fn=ask_question_stream,
                     multimodal=True,
                     additional_inputs=[
@@ -171,9 +277,13 @@ def build_demo() -> gr.Blocks:
                         server_dropdown,
                         llm_temperature,
                         llm_max_tokens,
+                        llm_top_p,
+                        llm_typical_p,
+                        llm_num_ctx,
                         search_provider_state,
                         web_search_enabled,
                         search_num_results_state,
+                        search_summary_length_state,
                     ],
                     fill_width=True,
                     fill_height=True,
@@ -197,11 +307,18 @@ def build_demo() -> gr.Blocks:
                     )
                     search_num_results_slider = gr.Slider(
                         minimum=1,
-                        maximum=10,
+                        maximum=20,
                         step=1,
-                        value=max(1, min(default_search_num_results, 10)),
+                        value=max(1, min(default_search_num_results, 20)),
                         label="Search Results Count",
                         info="How many web search results to use for answer grounding",
+                        interactive=True,
+                    )
+                    search_summary_length_dropdown = gr.Dropdown(
+                        choices=[("Short", "short"), ("Medium", "medium"), ("Long", "long")],
+                        label="Search Summary Length",
+                        value=default_search_summary_length,
+                        info="Controls how detailed search summaries should be",
                         interactive=True,
                     )
                     tavily_api_key_input = gr.Textbox(
@@ -248,12 +365,23 @@ def build_demo() -> gr.Blocks:
                         0,
                         1,
                         step=0.1,
-                        value=0.5,
+                        value=default_llm_temperature,
                         label="Temperature",
                         info="Choose between 0 and 1",
                         interactive=True,
                     )
-                    llm_max_tokens_view = gr.Number(label="Max Tokens", interactive=True, value=1500)
+                    llm_max_tokens_view = gr.Number(label="Max Tokens", interactive=True, value=default_llm_max_tokens)
+                    llm_top_p_view = gr.Slider(0, 1, step=0.05, value=default_llm_top_p, label="Top P", interactive=True)
+                    llm_typical_p_view = gr.Slider(
+                        0,
+                        1,
+                        step=0.05,
+                        value=default_llm_typical_p,
+                        label="Typical P",
+                        interactive=True,
+                    )
+                    llm_num_ctx_view = gr.Number(label="Num CTX", interactive=True, value=default_llm_num_ctx)
+                    save_llm_setting_button = gr.Button(value="Save LLM Settings", variant="secondary")
                     prompt_temp_area = gr.Textbox(
                         label="Prompt workspace",
                         show_label=False,
@@ -284,8 +412,17 @@ def build_demo() -> gr.Blocks:
         # Sync drawer controls to hidden runtime inputs.
         search_provider_dropdown.change(lambda x: x, inputs=[search_provider_dropdown], outputs=[search_provider_state], queue=False)
         search_num_results_slider.change(lambda x: int(x), inputs=[search_num_results_slider], outputs=[search_num_results_state], queue=False)
+        search_summary_length_dropdown.change(
+            lambda x: _normalize_summary_length(str(x)),
+            inputs=[search_summary_length_dropdown],
+            outputs=[search_summary_length_state],
+            queue=False,
+        )
         llm_temperature_view.change(lambda x: x, inputs=[llm_temperature_view], outputs=[llm_temperature], queue=False)
         llm_max_tokens_view.change(lambda x: x, inputs=[llm_max_tokens_view], outputs=[llm_max_tokens], queue=False)
+        llm_top_p_view.change(lambda x: x, inputs=[llm_top_p_view], outputs=[llm_top_p], queue=False)
+        llm_typical_p_view.change(lambda x: x, inputs=[llm_typical_p_view], outputs=[llm_typical_p], queue=False)
+        llm_num_ctx_view.change(lambda x: x, inputs=[llm_num_ctx_view], outputs=[llm_num_ctx], queue=False)
 
         web_search_toggle.click(
             fn=toggle_web_search,
@@ -303,8 +440,41 @@ def build_demo() -> gr.Blocks:
 
         save_search_setting_button.click(
             fn=save_search_settings_ui,
-            inputs=[search_provider_dropdown, tavily_api_key_input, serper_api_key_input, search_num_results_slider],
-            outputs=[status_output],
+            inputs=[
+                search_provider_dropdown,
+                tavily_api_key_input,
+                serper_api_key_input,
+                search_num_results_slider,
+                search_summary_length_dropdown,
+            ],
+            outputs=[
+                status_output,
+                search_provider_dropdown,
+                search_num_results_slider,
+                search_summary_length_dropdown,
+                search_provider_state,
+                search_num_results_state,
+                search_summary_length_state,
+            ],
+            queue=False,
+        )
+
+        save_llm_setting_button.click(
+            fn=save_llm_settings_ui,
+            inputs=[llm_temperature_view, llm_max_tokens_view, llm_top_p_view, llm_typical_p_view, llm_num_ctx_view],
+            outputs=[
+                status_output,
+                llm_temperature_view,
+                llm_max_tokens_view,
+                llm_top_p_view,
+                llm_typical_p_view,
+                llm_num_ctx_view,
+                llm_temperature,
+                llm_max_tokens,
+                llm_top_p,
+                llm_typical_p,
+                llm_num_ctx,
+            ],
             queue=False,
         )
 
@@ -323,7 +493,17 @@ def build_demo() -> gr.Blocks:
         stop_button.click(
             fn=stop_response,
             inputs=[],
-            outputs=[question_input],
+            outputs=[question_input, status_output],
+            queue=False,
+        )
+
+        def clear_chat_history():
+            return [], [], ""
+
+        clean_answer_button.click(
+            fn=clear_chat_history,
+            inputs=[],
+            outputs=[chatbot, chat_interface.chatbot_state, status_output],
             queue=False,
         )
 

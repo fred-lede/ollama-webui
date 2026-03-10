@@ -1,11 +1,11 @@
 {
     "llm_parameters": [
         {
-            "llm_temperature": 0.8,
-            "llm_max_tokens": 2048,
-            "llm_top_p": 0.9,
-            "llm_typical_p": 0.7,
-            "llm_num_ctx": 2048
+            "llm_temperature": 0.5,
+            "llm_max_tokens": 4096,
+            "llm_top_p": 0.8,
+            "llm_typical_p": 0.6,
+            "llm_num_ctx": 4096
         }
     ],
     "hosts": [
@@ -21,7 +21,7 @@
             "port": 11434,
             "default": false
         },
-		{
+        {
             "server_name": "UM890-Pro",
             "address": "http://dreamcloud.myds.me",
             "port": 11200,

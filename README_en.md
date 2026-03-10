@@ -1,42 +1,64 @@
-
-# Chatting with Local or Remote Ollama on Windows Using Gradio
+# Ollama WebUI (Gradio)
 
 [Chinese](./README.md) | English
 
+## Overview
+This project provides a Gradio-based WebUI for local or remote Ollama servers, including chat, vision input, web search, and tool integration.
+
 ## Features
+- Multi-language UI (Chinese, English, Thai; extendable via `language_settings.json`)
+- Multi-host management (hosts loaded from `server_settings.json`; add host from UI)
+- LLM parameter controls:
+  - `Temperature`
+  - `Max Tokens`
+  - `Top P`
+  - `Typical P`
+  - `Num CTX`
+- Web Search providers: `Serper.dev` and `Tavily`
+- Search controls:
+  - `Search Results Count` (1~20)
+  - `Search Summary Length` (`short` / `medium` / `long`)
+- Built-in tools:
+  - `datetime`
+  - `calculator`
+  - `fetch_url`
+  - `web_search`
+- Manual tool commands:
+  - `/tools`
+  - `/tool <name> <json-args>`
+- `Stop Answer` supports cancellation for streaming and most tool paths
+- `Clear Answer` clears both visible chat and internal history
 
-- The interface languages include Chinese, English, and Thai. Users can also add or remove them as needed. If necessary, the language_settings.json file can be modified, but it is essential to maintain the content format.
-- The local or remote Ollama services are stored in the server_settings.json file. They are selected via a menu in the user interface. The program will automatically retrieve the models that Ollama on the host can provide, and users can choose to use them according to their needs. However, this program only supports language models.
-- The Ollama service host can be added on the settings page, but currently, editing and modification are not available. Please directly edit the server_settings.json file.
-- The settings page also provides the setting of model parameters such as Temperature, Num Predict (Max Tokens), Top_p, Typical_p, and Num CTX.
-- The virtual assistant page is a chatting interface. If the selected model provides the Vision function, images can be uploaded for Q&A.
+## Config Files
+- `server_settings.json`
+  - `hosts`: Ollama host list
+  - `llm_parameters`: default LLM parameters (synced with UI)
+- `app_settings.json`
+  - `search.provider`
+  - `search.num_results`
+  - `search.summary_length`
+  - `search.tavily_api_key` / `search.serper_api_key`
+  - `search.tavily_api_url` / `search.serper_api_url`
 
-## Environment Requirements
-- Windows 10/11
-- Python 3.10.11 (the development environment I used)
-- Gradio 5.1.0 (the version I used)
+## Requirements
+- Python 3.10+ (recommended)
+- Install dependencies from `requirements.txt`
 
-## Installation and Running
+## Install & Run
+1. (Optional) Create a virtual environment
+2. Install dependencies:
+   `pip install -r requirements.txt`
+3. Start:
+   `python ollama-webui.py`
 
-### You can directly download the packaged version and use it after decompression
-https://github.com/fred-lede/ollama-webui/releases
+## Common Tasks
+- Switch/add Ollama hosts: Settings drawer > `Server`
+- Tune search & summary length: Settings drawer > `Search`
+- Save LLM defaults back to file: Settings drawer > `Advanced` > `Save LLM Settings`
 
-### User Interface
-![1](https://github.com/user-attachments/assets/e45f43d0-0767-4713-a0ae-c6bc673d751e)
-![2](https://github.com/user-attachments/assets/311d588d-45b5-48ff-92a2-1facad868dc4)
-
-### Using the Source Code
-1. `pip install virtualenv`
-2. `virtualenv -p python3.10.11 myenv`
-3. `myenv\scripts\activate`
-4. Clone or download the code of this project: https://github.com/fred-lede/ollama-webui.git
-5. Install the dependent libraries: `pip install -r requirements.txt`
-6. Run the program: `python ollama-webui.py`
-
-## Contributors
-
-- Fred
+## Additional Docs
+- Chinese readme: [README.md](./README.md)
+- Cross-machine handoff guide: [HANDOFF.md](./HANDOFF.md)
 
 ## License
-
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under [MIT License](LICENSE).

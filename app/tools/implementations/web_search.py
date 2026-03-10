@@ -1,9 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 from typing import Any
 
 from app.core.app_settings import load_app_settings
+from app.core.cancellation import ensure_not_stopped
 from app.tools.base import BaseTool
 from app.tools.search_providers.base import SearchProvider
 from app.tools.search_providers.serper_provider import SerperProvider
@@ -32,6 +33,7 @@ class WebSearchTool(BaseTool):
         return SerperProvider()
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        ensure_not_stopped()
         query = str(arguments.get("query", "")).strip()
         if not query:
             raise ValueError("Missing 'query' argument")
@@ -41,6 +43,7 @@ class WebSearchTool(BaseTool):
             num_results = int(num_results)
         except (TypeError, ValueError):
             raise ValueError("'num_results' must be an integer")
+        num_results = max(1, min(num_results, 20))
 
         cfg = load_app_settings().get("search", {})
         default_provider = self._normalize_provider(str(cfg.get("provider", "serper.dev")))
@@ -48,7 +51,9 @@ class WebSearchTool(BaseTool):
         provider_name = self._normalize_provider(raw_provider)
 
         provider = self.provider or self._build_provider(provider_name)
+        ensure_not_stopped()
         results = provider.search(query=query, num_results=num_results)
+        ensure_not_stopped()
         data = [
             {
                 "title": item.title,

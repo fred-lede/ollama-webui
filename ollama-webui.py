@@ -1,4 +1,4 @@
-﻿from app.main import launch
+from app.main import launch
 
 
 if __name__ == "__main__":

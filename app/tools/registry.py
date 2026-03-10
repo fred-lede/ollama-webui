@@ -1,7 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Any
 
+from app.core.cancellation import OperationCancelled
 from app.tools.base import BaseTool
 
 
@@ -34,6 +35,8 @@ class ToolRegistry:
                 "tool_name": name,
                 "result": result,
             }
+        except OperationCancelled:
+            raise
         except Exception as exc:  # noqa: BLE001
             return {
                 "ok": False,
