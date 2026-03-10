@@ -1,0 +1,146 @@
+# ==================================================
+# AI Factory OS .gitignore
+# Flutter + FastAPI + AI + macOS + Windows
+# ==================================================
+
+############################
+# Python
+############################
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+
+*.so
+*.egg
+*.egg-info/
+
+build/
+dist/
+
+.venv/
+venv/
+env/
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+############################
+# Python tooling
+############################
+
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+############################
+# SQLite / local databases
+############################
+
+*.db
+*.sqlite
+*.sqlite3
+
+############################
+# AI models / embeddings
+############################
+
+models/
+checkpoints/
+embeddings/
+
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.onnx
+
+############################
+# Ollama / local model cache
+############################
+
+.ollama/
+
+############################
+# Node / JS
+############################
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+############################
+# Flutter / Dart
+############################
+
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+build/
+android/.gradle/
+ios/Pods/
+
+############################
+# Flutter generated
+############################
+
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+############################
+# IDE
+############################
+
+.vscode/
+.idea/
+*.iml
+
+############################
+# macOS
+############################
+
+.DS_Store
+
+############################
+# Windows
+############################
+
+Thumbs.db
+desktop.ini
+
+############################
+# Logs
+############################
+
+logs/
+*.log
+
+############################
+# Environment variables
+############################
+
+.env
+.env.*
+!.env.example
+
+############################
+# Temporary files
+############################
+
+tmp/
+temp/
+
+############################
+# Demo / test artifacts
+############################
+
+demo/images/
+demo/data/
