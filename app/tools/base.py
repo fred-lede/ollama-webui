@@ -1,19 +1,21 @@
 ﻿from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Protocol
+from abc import ABC, abstractmethod
+from typing import Any
 
 
-@dataclass
-class ToolResult:
-    success: bool
-    data: Any = None
-    error: str | None = None
+class BaseTool(ABC):
+    """Minimal, consistent interface for all tools."""
 
-
-class Tool(Protocol):
     name: str
     description: str
 
-    def run(self, args: dict[str, Any]) -> ToolResult:
-        ...
+    @abstractmethod
+    def run(self, arguments: dict[str, Any]) -> Any:
+        """Execute tool logic and return structured data."""
+
+    def schema(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "description": self.description,
+        }

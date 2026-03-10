@@ -181,6 +181,7 @@ def build_demo() -> gr.Blocks:
                     autofocus=False,
                     show_progress="full",
                     textbox=question_input,
+                    additional_outputs=[status_output],
                 )
 
             with gr.Column(scale=4, visible=False) as settings_drawer:
@@ -399,3 +400,4 @@ def build_demo() -> gr.Blocks:
         )
 
     return demo
+

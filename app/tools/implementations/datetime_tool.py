@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from app.tools.base import ToolResult
+from app.tools.base import BaseTool
 
 try:
     from zoneinfo import ZoneInfo
@@ -11,32 +11,23 @@ except ImportError:  # pragma: no cover
     ZoneInfo = None  # type: ignore[assignment]
 
 
-class DateTimeTool:
+class DateTimeTool(BaseTool):
     name = "datetime"
-    description = (
-        "Get current date/time. args: {\"timezone\": \"Asia/Taipei\", "
-        "\"format\": \"%Y-%m-%d %H:%M:%S\"}"
-    )
+    description = "Get current local datetime. arguments: {\"timezone\":\"Asia/Taipei\",\"format\":\"%Y-%m-%d %H:%M:%S\"}"
 
-    def run(self, args: dict[str, Any]) -> ToolResult:
-        tz_name = str(args.get("timezone", "")).strip()
-        fmt = str(args.get("format", "%Y-%m-%d %H:%M:%S")).strip() or "%Y-%m-%d %H:%M:%S"
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        tz_name = str(arguments.get("timezone", "")).strip()
+        fmt = str(arguments.get("format", "%Y-%m-%d %H:%M:%S")).strip() or "%Y-%m-%d %H:%M:%S"
 
-        try:
-            if tz_name:
-                if ZoneInfo is None:
-                    return ToolResult(success=False, error="ZoneInfo is not available in this Python runtime")
-                now = datetime.now(ZoneInfo(tz_name))
-            else:
-                now = datetime.now()
+        if tz_name:
+            if ZoneInfo is None:
+                raise ValueError("ZoneInfo is not available in this Python runtime")
+            now = datetime.now(ZoneInfo(tz_name))
+        else:
+            now = datetime.now()
 
-            return ToolResult(
-                success=True,
-                data={
-                    "timezone": tz_name or "local",
-                    "iso": now.isoformat(),
-                    "formatted": now.strftime(fmt),
-                },
-            )
-        except Exception as exc:  # noqa: BLE001
-            return ToolResult(success=False, error=f"Datetime tool failed: {exc}")
+        return {
+            "timezone": tz_name or "local",
+            "iso": now.isoformat(),
+            "formatted": now.strftime(fmt),
+        }
