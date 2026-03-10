@@ -29,6 +29,23 @@ This project provides a Gradio-based WebUI for local or remote Ollama servers, i
 - `Stop Answer` supports cancellation for streaming and most tool paths
 - `Clear Answer` clears both visible chat and internal history
 
+## Architecture (Orchestrator)
+The codebase has been progressively split from a monolithic `chat_service.py` into layered components:
+- `app/services/chat_service.py`
+  - Gradio interaction + streaming adapter
+- `app/orchestrator/auto_tool_planner.py`
+  - deterministic tool planning + fallback strategy
+- `app/orchestrator/intent_router.py`
+  - intent detection (time/calc/fetch/search)
+- `app/orchestrator/tool_runtime.py`
+  - policy-guarded tool execution with cancellation support
+- `app/orchestrator/model_runtime.py`
+  - model request runtime + summary prompt builders
+- `app/orchestrator/types.py`
+  - typed actions and orchestration data structures
+
+This separation improves maintainability, testability, and change safety across UI, tool, and model layers.
+
 ## Config Files
 - `server_settings.json`
   - `hosts`: Ollama host list

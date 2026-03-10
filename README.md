@@ -22,6 +22,23 @@
 - 「停止回答」可中止串流與多數工具流程
 - 「清除回答」會同步清空畫面與對話歷史
 
+## 架構（Orchestrator）
+目前專案已由單一 `chat_service.py` 漸進拆分為分層架構：
+- `app/services/chat_service.py`
+  - 保留 Gradio 互動流程與串流輸出（adapter）
+- `app/orchestrator/auto_tool_planner.py`
+  - deterministic 工具路由與 fallback 規劃
+- `app/orchestrator/intent_router.py`
+  - 工具意圖判斷（time/calc/fetch/search）
+- `app/orchestrator/tool_runtime.py`
+  - 工具執行入口（含 policy + cancellation）
+- `app/orchestrator/model_runtime.py`
+  - 模型呼叫與摘要 prompt builder
+- `app/orchestrator/types.py`
+  - typed action 與 orchestrator 型別定義
+
+此分層讓工具流程、模型流程、UI 流程可獨立演進，降低回歸風險並提升可測試性。
+
 ## 設定檔
 - `server_settings.json`
   - `hosts`: Ollama 主機清單
