@@ -26,6 +26,7 @@ This project provides a Gradio-based WebUI for local or remote Ollama servers, i
 - Manual tool commands:
   - `/tools`
   - `/tool <name> <json-args>`
+- Main toolbar provides `連線測試` (Connection Test) with status light (`未測試` / `連線正常` / `連線失敗`)
 - `Stop Answer` supports cancellation for streaming and most tool paths
 - `Clear Answer` clears both visible chat and internal history
 
@@ -41,6 +42,8 @@ The codebase has been progressively split from a monolithic `chat_service.py` in
   - policy-guarded tool execution with cancellation support
 - `app/orchestrator/model_runtime.py`
   - model request runtime + summary prompt builders
+- `app/orchestrator/conversation_pipeline.py`
+  - extracted legacy conversation flow (tool decision/fallback/tool-call/second model pass)
 - `app/orchestrator/types.py`
   - typed actions and orchestration data structures
 
@@ -72,6 +75,7 @@ This separation improves maintainability, testability, and change safety across 
 - Switch/add Ollama hosts: Settings drawer > `Server`
 - Tune search & summary length: Settings drawer > `Search`
 - Save LLM defaults back to file: Settings drawer > `Advanced` > `Save LLM Settings`
+- Test active model connectivity: main toolbar > `連線測試` (status shown in light + status textbox)
 
 ## Additional Docs
 - Chinese readme: [README.md](./README.md)

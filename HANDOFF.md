@@ -6,6 +6,8 @@ This file helps you continue development on another computer with minimal setup 
 - Entry point: `ollama-webui.py`
 - Main UI: `app/ui/gradio_app.py`
 - Chat/runtime logic: `app/services/chat_service.py`
+- Server/model connection checks: `app/services/server_service.py`
+- Legacy flow pipeline: `app/orchestrator/conversation_pipeline.py`
 - Config IO:
   - `app/core/config.py` (`server_settings.json`, `llm_parameters`)
   - `app/core/app_settings.py` (`app_settings.json`)
@@ -34,6 +36,8 @@ This file helps you continue development on another computer with minimal setup 
 ## 4. Post-Setup Validation Checklist
 - App launches without traceback.
 - Host dropdown can load models from your default host.
+- Main toolbar `連線測試` can verify `/api/chat` for the selected server+model.
+- Connection status light updates correctly (`未測試` / `連線正常` / `連線失敗`).
 - `Clear Answer` clears both visible chat and hidden history.
 - `Stop Answer` stops active response and shows stopping status.
 - Search settings are persisted:
@@ -59,7 +63,8 @@ This file helps you continue development on another computer with minimal setup 
   - Check API keys in `app_settings.json`.
   - Confirm provider endpoint URLs.
 - If remote Ollama is unstable:
-  - Check server availability and model health first.
+  - Use main toolbar `連線測試` first (tests selected server+model via `/api/chat`).
+  - Then check server availability and model health.
   - Review `log-webui.log` for request errors.
 
 ## 7. Recommended First Commands On New Machine

@@ -19,6 +19,7 @@
 - 支援手動工具命令：
   - `/tools`
   - `/tool <name> <json-args>`
+- 主畫面提供「連線測試」按鈕與連線狀態燈（未測試/連線正常/連線失敗）
 - 「停止回答」可中止串流與多數工具流程
 - 「清除回答」會同步清空畫面與對話歷史
 
@@ -34,6 +35,8 @@
   - 工具執行入口（含 policy + cancellation）
 - `app/orchestrator/model_runtime.py`
   - 模型呼叫與摘要 prompt builder
+- `app/orchestrator/conversation_pipeline.py`
+  - legacy 對話流程抽離（tool decision/fallback/tool call/第二次模型回答）
 - `app/orchestrator/types.py`
   - typed action 與 orchestrator 型別定義
 
@@ -65,6 +68,7 @@
 - 切換/新增 Ollama 主機：右側設定面板 > `Server`
 - 調整搜尋與摘要長度：右側設定面板 > `Search`
 - 調整 LLM 參數並寫回檔案：右側設定面板 > `Advanced` > `Save LLM Settings`
+- 測試目前大模型連線：主畫面第二列 > `連線測試`（結果會顯示在狀態燈與狀態列）
 
 ## 參考文件
 - 英文說明：[README_en.md](./README_en.md)
