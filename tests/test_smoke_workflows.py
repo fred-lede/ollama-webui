@@ -14,6 +14,7 @@ from app.orchestrator import (
     ToolIntentRouter,
 )
 from app.services import chat_service
+from app.services.server_service import test_llm_connection
 from app.ui.gradio_app import clear_chat_history_state
 
 
@@ -167,6 +168,37 @@ class StopAndClearSmokeTests(unittest.TestCase):
             for _msg, st in gen:
                 statuses.append(st)
             self.assertIn("Stopped", statuses)
+
+
+class LlmConnectivitySmokeTests(unittest.TestCase):
+    def test_llm_connection_requires_server_and_model(self):
+        status, light = test_llm_connection(None, None)
+        self.assertIn("請先選擇伺服器", status)
+        self.assertIn("未測試", light)
+
+    def test_llm_connection_success(self):
+        fake_response = type(
+            "Resp",
+            (),
+            {
+                "content": b"{}",
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"message": {"role": "assistant", "content": "pong"}},
+            },
+        )()
+        with patch("app.services.server_service.requests.post", return_value=fake_response):
+            status, light = test_llm_connection("http://127.0.0.1:11434", "qwen3.5:9b")
+            self.assertIn("LLM 連線正常", status)
+            self.assertIn("連線正常", light)
+
+    def test_llm_connection_request_failure(self):
+        with patch(
+            "app.services.server_service.requests.post",
+            side_effect=requests.RequestException("connect fail"),
+        ):
+            status, light = test_llm_connection("http://127.0.0.1:11434", "qwen3.5:9b")
+            self.assertIn("LLM 連線失敗", status)
+            self.assertIn("連線失敗", light)
 
 
 if __name__ == "__main__":

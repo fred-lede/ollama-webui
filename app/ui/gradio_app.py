@@ -5,17 +5,31 @@ import gradio as gr
 from app.core.app_settings import load_app_settings, save_app_settings
 from app.core.config import load_language_settings, load_llm_parameters, load_settings, save_llm_parameters
 from app.services.chat_service import ask_question_stream, send_prompt, stop_response
-from app.services.server_service import fetch_models, handle_add_server, handle_server_change
+from app.services.server_service import fetch_models, handle_add_server, handle_server_change, test_llm_connection
 
 css = """
 .my-button {
     width: 110px !important;
+}
+.toolbar-button {
+    min-width: 140px !important;
+}
+.status-light {
+    min-width: 130px;
 }
 .drawer-note {
     opacity: 0.85;
     font-size: 0.9rem;
 }
 """
+
+DEFAULT_LLM_CONNECTION_LIGHT = (
+    "<div style='display:inline-flex;align-items:center;gap:8px;"
+    "padding:6px 10px;border-radius:999px;background:#fff7ed;'>"
+    "<span style='width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;'></span>"
+    "<span style='font-size:13px;'>未測試</span>"
+    "</div>"
+)
 
 
 def _clamp_float(value: float | int | str, minimum: float, maximum: float, default: float) -> float:
@@ -233,11 +247,28 @@ def build_demo() -> gr.Blocks:
                     file_types=[".jpg", ".jpeg", ".png", ".bmp"],
                 )
 
-                with gr.Row():
-                    stop_button = gr.Button(value=translations.get("stop_button", "Stop Answer"), elem_classes="my-button")
+                with gr.Row(equal_height=True):
+                    test_llm_connection_button = gr.Button(
+                        value="連線測試",
+                        elem_classes=["my-button", "toolbar-button"],
+                        scale=0,
+                    )
+                    llm_connection_light = gr.HTML(
+                        value=DEFAULT_LLM_CONNECTION_LIGHT,
+                        elem_classes=["status-light"],
+                        scale=0,
+                    )
+                    stop_button = gr.Button(
+                        value=translations.get("stop_button", "Stop Answer"),
+                        elem_classes=["my-button", "toolbar-button"],
+                        variant="primary",
+                        scale=0,
+                    )
                     clean_answer_button = gr.Button(
                         value=translations.get("clean_answer_button", "Clear Answer"),
-                        elem_classes="my-button",
+                        elem_classes=["my-button", "toolbar-button"],
+                        variant="secondary",
+                        scale=0,
                     )
 
                 status_output = gr.Textbox(
@@ -479,6 +510,13 @@ def build_demo() -> gr.Blocks:
                 llm_typical_p,
                 llm_num_ctx,
             ],
+            queue=False,
+        )
+
+        test_llm_connection_button.click(
+            fn=test_llm_connection,
+            inputs=[server_dropdown, model_dropdown],
+            outputs=[status_output, llm_connection_light],
             queue=False,
         )
 
