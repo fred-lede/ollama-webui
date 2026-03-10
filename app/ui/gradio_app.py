@@ -50,6 +50,10 @@ def _normalize_summary_length(value: str) -> str:
     return "medium"
 
 
+def clear_chat_history_state():
+    return [], [], ""
+
+
 def build_demo() -> gr.Blocks:
     language_settings = load_language_settings()
     current_language = language_settings.get("default_language", "English")
@@ -497,11 +501,8 @@ def build_demo() -> gr.Blocks:
             queue=False,
         )
 
-        def clear_chat_history():
-            return [], [], ""
-
         clean_answer_button.click(
-            fn=clear_chat_history,
+            fn=clear_chat_history_state,
             inputs=[],
             outputs=[chatbot, chat_interface.chatbot_state, status_output],
             queue=False,
