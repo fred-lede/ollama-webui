@@ -54,15 +54,15 @@ def _normalize_server_base(selected_server: str) -> tuple[str, int]:
 
 def _status_light_html(level: str, label: str) -> str:
     palette = {
-        "ok": ("#16a34a", "#ecfdf3"),
-        "warn": ("#f59e0b", "#fff7ed"),
-        "error": ("#dc2626", "#fef2f2"),
+        "ok": "#16a34a",
+        "warn": "#f59e0b",
+        "error": "#dc2626",
     }
-    dot, bg = palette.get(level, palette["warn"])
+    dot = palette.get(level, palette["warn"])
     safe_label = str(label).strip() or "未測試"
     return (
         "<div style='display:inline-flex;align-items:center;gap:8px;"
-        f"padding:6px 10px;border-radius:999px;background:{bg};'>"
+        "padding:0;background:transparent;'>"
         f"<span style='width:10px;height:10px;border-radius:50%;background:{dot};display:inline-block;'></span>"
         f"<span style='font-size:13px;'>{safe_label}</span>"
         "</div>"

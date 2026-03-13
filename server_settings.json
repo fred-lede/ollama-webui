@@ -16,18 +16,18 @@
             "default": false
         },
         {
-            "server_name": "H+",
-            "address": "http://10.110.140.226",
-            "port": 11434,
+            "server_name": "UM890Pro-5090-32G",
+            "address": "https://dreamcloud.myds.me",
+            "port": 11443,
             "default": false
         },
         {
-            "server_name": "UM890-Pro",
+            "server_name": "UM890Pro-4070TiSuper-16G",
             "address": "http://dreamcloud.myds.me",
-            "port": 11200,
+            "port": 11201,
             "default": true
         },
-        {
+		{
             "server_name": "VICTUS",
             "address": "http://192.168.1.62",
             "port": 11434,

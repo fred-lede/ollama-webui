@@ -4,6 +4,8 @@ import json
 import time
 from typing import Any, Callable, Generator
 
+from app.core.cancellation import OperationCancelled
+
 
 def run_legacy_conversation_stream(
     *,
@@ -31,6 +33,57 @@ def run_legacy_conversation_stream(
     tool_router: Any,
     image_payload: dict[str, object],
 ) -> Generator[tuple[dict[str, str], str], None, None]:
+    def run_fallback_generation(reason: str) -> Generator[tuple[dict[str, str], str], None, None]:
+        yield new_messages[-1], reason
+
+        fallback_payloads = build_fallback_payloads(
+            model=model,
+            prompt=prompt,
+            user_text=user_text,
+            options=options,
+            image_payload=image_payload,
+        )
+
+        fallback_error: Exception | None = None
+        for attempt_name, fallback_payload in fallback_payloads:
+            try:
+                if assistant_message["content"]:
+                    assistant_message["content"] = ""
+                    new_messages[-1]["content"] = ""
+
+                for chunk in stream_chat(url, headers, fallback_payload):
+                    ensure_not_stopped()
+                    assistant_message["content"] += chunk
+                    new_messages[-1]["content"] = assistant_message["content"]
+                    yield new_messages[-1], f"Generating answer ({attempt_name})"
+                    time.sleep(0.02)
+
+                if assistant_message["content"].strip():
+                    fallback_error = None
+                    break
+            except OperationCancelled:
+                raise
+            except Exception as retry_exc:  # noqa: BLE001
+                fallback_error = retry_exc
+
+        if fallback_error is not None and not assistant_message["content"].strip():
+            raise fallback_error
+
+        if assistant_message["content"] and web_refs:
+            linked = linkify_reference_markers(assistant_message["content"], web_refs)
+            linked_with_sources = append_source_links(linked, web_refs)
+            if linked_with_sources != assistant_message["content"]:
+                assistant_message["content"] = linked_with_sources
+                new_messages[-1]["content"] = linked_with_sources
+
+        if not assistant_message["content"].strip():
+            assistant_message["content"] = "The model returned no content."
+            new_messages[-1]["content"] = assistant_message["content"]
+            yield new_messages[-1], "Empty model response"
+            return
+
+        yield new_messages[-1], "Completed (fallback)"
+
     prompt = build_history_prompt(history, user_text)
     web_refs: list[dict[str, str]] = []
 
@@ -67,53 +120,18 @@ def run_legacy_conversation_stream(
     try:
         first_response_text = post_chat_once(url, headers, first_payload)
     except Exception as exc:
-        yield new_messages[-1], "Tool decision failed, fallback to normal chat"
-
-        fallback_payloads = build_fallback_payloads(
-            model=model,
-            prompt=prompt,
-            user_text=user_text,
-            options=options,
-            image_payload=image_payload,
-        )
-
-        fallback_error: Exception | None = None
-        for attempt_name, fallback_payload in fallback_payloads:
-            try:
-                if assistant_message["content"]:
-                    assistant_message["content"] = ""
-                    new_messages[-1]["content"] = ""
-
-                for chunk in stream_chat(url, headers, fallback_payload):
-                    ensure_not_stopped()
-                    assistant_message["content"] += chunk
-                    new_messages[-1]["content"] = assistant_message["content"]
-                    yield new_messages[-1], f"Generating answer ({attempt_name})"
-                    time.sleep(0.02)
-
-                if assistant_message["content"].strip():
-                    fallback_error = None
-                    break
-            except Exception as retry_exc:  # noqa: BLE001
-                fallback_error = retry_exc
-
-        if fallback_error is not None and not assistant_message["content"].strip():
-            raise fallback_error
-
-        if assistant_message["content"] and web_refs:
-            linked = linkify_reference_markers(assistant_message["content"], web_refs)
-            linked_with_sources = append_source_links(linked, web_refs)
-            if linked_with_sources != assistant_message["content"]:
-                assistant_message["content"] = linked_with_sources
-                new_messages[-1]["content"] = linked_with_sources
-
-        if not assistant_message["content"].strip():
+        try:
+            yield from run_fallback_generation("Tool decision failed, fallback to normal chat")
+        except OperationCancelled:
+            raise
+        except Exception:
             assistant_message["content"] = f"Server request failed: {exc}"
             new_messages[-1]["content"] = assistant_message["content"]
             yield new_messages[-1], f"Error: {exc}"
-            return
+        return
 
-        yield new_messages[-1], "Completed (fallback)"
+    if not str(first_response_text or "").strip():
+        yield from run_fallback_generation("Tool decision returned empty content, fallback to normal chat")
         return
 
     extracted = tool_router.extract_tool_call(first_response_text)
@@ -121,7 +139,8 @@ def run_legacy_conversation_stream(
     if extracted is None:
         clean_text = tool_router.remove_tool_call_markup(first_response_text)
         if not clean_text:
-            clean_text = first_response_text.strip() or "(empty response)"
+            yield from run_fallback_generation("Tool decision produced no answer, fallback to normal chat")
+            return
 
         assistant_message["content"] = clean_text
         if assistant_message["content"] and web_refs:

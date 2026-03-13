@@ -40,6 +40,26 @@ def load_language_settings() -> dict[str, Any]:
         return json.load(f)
 
 
+def save_default_language(default_language: str) -> bool:
+    if not LANGUAGE_FILE.exists():
+        return False
+
+    try:
+        with LANGUAGE_FILE.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return False
+
+    payload["default_language"] = str(default_language).strip() or "English"
+
+    try:
+        with LANGUAGE_FILE.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=4)
+        return True
+    except OSError:
+        return False
+
+
 def load_settings() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     if not CONFIG_FILE.exists():
         logging.info("%s not found.", CONFIG_FILE.name)

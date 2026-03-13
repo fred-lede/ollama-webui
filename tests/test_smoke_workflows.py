@@ -15,7 +15,6 @@ from app.orchestrator import (
 )
 from app.services import chat_service
 from app.services.server_service import test_llm_connection
-from app.ui.gradio_app import clear_chat_history_state
 
 
 class FakeRuntime:
@@ -135,10 +134,10 @@ class StopAndClearSmokeTests(unittest.TestCase):
             self.assertFalse(cancellation.is_stop_requested())
 
     def test_clear_history_helper(self):
-        chat, state, status = clear_chat_history_state()
+        chat, state, status = chat_service.create_new_chat_session()
         self.assertEqual(chat, [])
         self.assertEqual(state, [])
-        self.assertEqual(status, "")
+        self.assertEqual(status, "Started a new chat.")
 
     def test_stop_during_stream_returns_stopped_status(self):
         def fake_stream(*_args, **_kwargs):
@@ -168,6 +167,39 @@ class StopAndClearSmokeTests(unittest.TestCase):
             for _msg, st in gen:
                 statuses.append(st)
             self.assertIn("Stopped", statuses)
+
+    def test_empty_tool_decision_falls_back_to_normal_chat(self):
+        def fake_stream(*_args, **_kwargs):
+            yield "fallback answer"
+
+        with patch.object(chat_service.auto_tool_planner, "plan", return_value=None), patch.object(
+            chat_service, "_post_chat_once", return_value=""
+        ), patch.object(chat_service, "_stream_chat", side_effect=fake_stream):
+            gen = chat_service.ask_question_stream(
+                question={"text": "tell me something", "files": []},
+                history=[],
+                model="dummy",
+                selected_server="http://127.0.0.1:11434",
+                llm_temperature=0.5,
+                llm_max_tokens=256,
+                llm_top_p=0.9,
+                llm_typical_p=0.7,
+                llm_num_ctx=2048,
+                search_provider="serper.dev",
+                web_search_enabled=False,
+                search_num_results=5,
+                search_summary_length="medium",
+            )
+            last_message = None
+            statuses = []
+            for msg, st in gen:
+                last_message = msg
+                statuses.append(st)
+
+            self.assertIsNotNone(last_message)
+            self.assertIn("fallback answer", last_message.get("content", ""))
+            self.assertNotIn("(empty response)", last_message.get("content", ""))
+            self.assertIn("Completed (fallback)", statuses)
 
 
 class LlmConnectivitySmokeTests(unittest.TestCase):

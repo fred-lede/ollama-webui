@@ -7,6 +7,7 @@ __pycache__/
 
 # Logs
 *.log
+log-webui.log
 
 # Environment
 .env
@@ -20,3 +21,11 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime app data
+data/
+exports/
+Microsoft/
+
+# Local app settings
+app_settings.json
