@@ -142,7 +142,10 @@ def _build_session_choice_label(session: dict[str, object]) -> str:
     if len(title) > 30:
         title = title[:27].rstrip() + "..."
     updated_at = _format_session_time(str(session.get("updated_at", "")).strip())
-    return f"{title} | {updated_at}" if updated_at else title
+    base = f"{title} | {updated_at}" if updated_at else title
+    if session.get("pinned"):
+        return f"[PIN] {base}"
+    return base
 
 
 def _format_session_time(value: str) -> str:
@@ -428,6 +431,109 @@ def create_new_chat_session_with_dataset_state() -> tuple[
         state["llm_num_ctx"],
         "Started a new chat.",
     )
+
+
+def clear_current_chat_with_state() -> tuple[
+    list[dict[str, str]],
+    list[dict[str, str]],
+    dict,
+    str,
+    dict,
+    str,
+    str,
+    str,
+    str | None,
+    str | None,
+    str | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    float | int | None,
+    str,
+]:
+    session = _get_or_create_current_session()
+    cleared = session_service.clear_messages(str(session["id"]))
+    active_session = cleared or session
+    state = _resolve_session_ui_state(active_session)
+    history = state["history"]
+    status = "Current chat cleared." if cleared is not None else "Session not found."
+    return (
+        history,
+        history,
+        state["preset_dropdown"],
+        state["preset_name"],
+        state["persona_dropdown"],
+        state["persona_name"],
+        state["persona_description"],
+        state["persona_system_prompt"],
+        state["persona_default_model"],
+        state["persona_default_preset"],
+        state["model"],
+        state["llm_temperature"],
+        state["llm_max_tokens"],
+        state["llm_top_p"],
+        state["llm_typical_p"],
+        state["llm_num_ctx"],
+        state["llm_temperature"],
+        state["llm_max_tokens"],
+        state["llm_top_p"],
+        state["llm_typical_p"],
+        state["llm_num_ctx"],
+        status,
+    )
+
+
+def set_session_pinned(session_id: str | None, pinned: bool) -> str:
+    if not session_id:
+        return "No session selected."
+    updated = session_service.set_pinned(session_id, pinned)
+    if updated is None:
+        return "Session not found."
+    return "Session pinned." if pinned else "Session unpinned."
+
+
+def is_session_pinned(session_id: str | None) -> bool:
+    if not session_id:
+        return False
+    session = session_service.get_session(session_id)
+    return bool(session.get("pinned")) if session else False
+
+
+def get_current_session_preferences() -> dict[str, str | None]:
+    session = _get_or_create_current_session()
+    return {
+        "server": str(session.get("server") or "").strip() or None,
+        "model": str(session.get("model") or "").strip() or None,
+        "preset_id": str(session.get("preset_id") or "").strip() or None,
+        "persona_id": str(session.get("persona_id") or "").strip() or None,
+    }
+
+
+def update_current_session_preferences(
+    *,
+    server: str | None = None,
+    model: str | None = None,
+    preset_id: str | None = None,
+    persona_id: str | None = None,
+) -> None:
+    session = _get_or_create_current_session()
+    updates: dict[str, object] = {}
+    if server is not None:
+        updates["server"] = server
+    if model is not None:
+        updates["model"] = model
+    if preset_id is not None:
+        updates["preset_id"] = preset_id
+    if persona_id is not None:
+        updates["persona_id"] = persona_id
+    if updates:
+        session_service.update_session(str(session["id"]), updates)
 
 
 def rename_chat_session(session_id: str | None, title: str) -> tuple[dict, str]:

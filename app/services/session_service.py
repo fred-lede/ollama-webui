@@ -38,6 +38,7 @@ class SessionService:
         payload = self._load()
         sessions = payload["sessions"]
         sessions.sort(key=lambda item: str(item.get("updated_at", "")), reverse=True)
+        sessions.sort(key=lambda item: not bool(item.get("pinned")))
         return copy.deepcopy(sessions)
 
     def get_session(self, session_id: str) -> dict[str, Any] | None:
@@ -137,6 +138,26 @@ class SessionService:
                         "created_at": now_iso(),
                     }
                 )
+                session["updated_at"] = now_iso()
+                self._save(payload)
+                return copy.deepcopy(session)
+        return None
+
+    def clear_messages(self, session_id: str) -> dict[str, Any] | None:
+        payload = self._load()
+        for session in payload["sessions"]:
+            if session.get("id") == session_id:
+                session["messages"] = []
+                session["updated_at"] = now_iso()
+                self._save(payload)
+                return copy.deepcopy(session)
+        return None
+
+    def set_pinned(self, session_id: str, pinned: bool) -> dict[str, Any] | None:
+        payload = self._load()
+        for session in payload["sessions"]:
+            if session.get("id") == session_id:
+                session["pinned"] = bool(pinned)
                 session["updated_at"] = now_iso()
                 self._save(payload)
                 return copy.deepcopy(session)

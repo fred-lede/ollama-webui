@@ -25,13 +25,19 @@
             "server_name": "UM890Pro-4070TiSuper-16G",
             "address": "http://dreamcloud.myds.me",
             "port": 11201,
-            "default": true
+            "default": false
         },
-		{
+        {
             "server_name": "VICTUS",
             "address": "http://192.168.1.62",
             "port": 11434,
             "default": false
+        },
+        {
+            "server_name": "GMK-K9",
+            "address": "http://192.168.1.123",
+            "port": 11434,
+            "default": true
         }
     ]
 }

@@ -3,14 +3,26 @@
 This file helps you continue development on another computer with minimal setup drift.
 
 ## 1. Workspace Snapshot
-- Entry point: `ollama-webui.py`
+- Entry point: `app/main.py`
 - Main UI: `app/ui/gradio_app.py`
 - Chat/runtime logic: `app/services/chat_service.py`
 - Server/model connection checks: `app/services/server_service.py`
+- Persistence services:
+  - `app/services/session_service.py`
+  - `app/services/preset_service.py`
+  - `app/services/persona_service.py`
+  - `app/services/prompt_service.py`
 - Legacy flow pipeline: `app/orchestrator/conversation_pipeline.py`
+- Orchestration runtime:
+  - `app/orchestrator/orchestrator.py`
+  - `app/orchestrator/auto_tool_planner.py`
+  - `app/orchestrator/model_runtime.py`
+  - `app/orchestrator/tool_runtime.py`
+  - `app/orchestrator/intent_router.py`
 - Config IO:
   - `app/core/config.py` (`server_settings.json`, `llm_parameters`)
   - `app/core/app_settings.py` (`app_settings.json`)
+  - `app/core/storage.py` (`data/*.json`)
 - Tool implementations:
   - `app/tools/implementations/*.py`
   - `app/tools/search_providers/*.py`
@@ -21,6 +33,10 @@ This file helps you continue development on another computer with minimal setup 
   - `server_settings.json`
   - `app_settings.json`
   - `language_settings.json` (if customized)
+- Runtime data folder:
+  - `data/` (`sessions.json`, `presets.json`, `personas.json`, `prompts.json`)
+- Optional export folder:
+  - `exports/`
 - Optional local log (for troubleshooting only):
   - `log-webui.log`
 
@@ -30,8 +46,10 @@ This file helps you continue development on another computer with minimal setup 
 3. (Optional) Create venv.
 4. Install dependencies:
    `pip install -r requirements.txt`
-5. Start app:
+5. Start app (compatibility entry point):
    `python ollama-webui.py`
+6. Alternative module entry point:
+   `python -m app.main`
 
 ## 4. Post-Setup Validation Checklist
 - App launches without traceback.
