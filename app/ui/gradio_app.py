@@ -24,6 +24,7 @@ from app.services.chat_service import (
     save_persona,
     save_preset_from_values,
     save_prompt_entry,
+    set_session_label_language,
     stop_response,
     switch_chat_session_with_state,
     insert_selected_prompt_into_workspace,
@@ -54,12 +55,16 @@ css = """
     }
 }
 .my-button {
-    width: 110px !important;
+    min-width: 110px !important;
+    width: auto !important;
 }
 .toolbar-button {
-    min-width: 140px !important;
+    min-width: 120px !important;
+    width: auto !important;
     min-height: 40px !important;
     height: 40px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
     padding-top: 8px !important;
     padding-bottom: 8px !important;
 }
@@ -69,6 +74,14 @@ css = """
 .drawer-note {
     opacity: 0.85;
     font-size: 0.9rem;
+}
+.settings-section-label {
+    margin: 12px 0 6px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase;
+    opacity: 0.72;
 }
 .session-stack {
     max-height: 396px;
@@ -96,17 +109,27 @@ css = """
     margin-bottom: 0 !important;
 }
 .session-item:focus,
-.session-item:focus-visible,
-.session-item button:focus,
-.session-item button:focus-visible {
+.session-item button:focus {
     outline: none !important;
     box-shadow: none !important;
+}
+.session-item:focus-visible,
+.session-item button:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35) !important;
+    border-color: var(--session-accent) !important;
 }
 .session-item.primary {
     background: var(--session-card-active) !important;
     color: var(--session-text) !important;
     border-color: var(--session-border-strong) !important;
     box-shadow: inset 0 0 0 1px var(--session-border-strong) !important;
+}
+.session-item.primary:focus-visible,
+.session-item.primary button:focus-visible {
+    box-shadow:
+        inset 0 0 0 1px var(--session-border-strong) !important,
+        0 0 0 2px rgba(245, 158, 11, 0.35) !important;
 }
 .session-item.primary::before {
     content: "";
@@ -150,6 +173,9 @@ UI_DEFAULT_TRANSLATIONS = {
         "settings_close": "Close Settings",
         "settings_heading": "### Settings",
         "settings_note": "<div class='drawer-note'>All settings live here and apply immediately after saving.</div>",
+        "settings_common": "Common",
+        "settings_workspace": "Workspace",
+        "settings_system": "System",
         "search_accordion": "Search",
         "search_provider": "Search Provider",
         "search_results_count": "Search Results Count",
@@ -251,6 +277,9 @@ UI_DEFAULT_TRANSLATIONS = {
         "settings_close": "關閉設定",
         "settings_heading": "### 設定面板",
         "settings_note": "<div class='drawer-note'>所有設定集中在這裡，儲存後即生效。</div>",
+        "settings_common": "常用",
+        "settings_workspace": "工作區",
+        "settings_system": "系統",
         "search_accordion": "搜尋",
         "search_provider": "搜尋服務",
         "search_results_count": "搜尋結果數量",
@@ -352,6 +381,9 @@ UI_DEFAULT_TRANSLATIONS = {
         "settings_close": "ปิดการตั้งค่า",
         "settings_heading": "### แผงการตั้งค่า",
         "settings_note": "<div class='drawer-note'>การตั้งค่าทั้งหมดอยู่ที่นี่และจะมีผลทันทีหลังบันทึก</div>",
+        "settings_common": "ทั่วไป",
+        "settings_workspace": "พื้นที่ทำงาน",
+        "settings_system": "ระบบ",
         "search_accordion": "ค้นหา",
         "search_provider": "ผู้ให้บริการค้นหา",
         "search_results_count": "จำนวนผลการค้นหา",
@@ -513,6 +545,7 @@ def build_demo() -> gr.Blocks:
     language_settings = load_language_settings()
     current_language = language_settings.get("default_language", "English")
     translations = _resolved_translations(language_settings, current_language)
+    set_session_label_language(current_language)
 
     settings = load_app_settings()
     search_cfg = settings.get("search", {}) if isinstance(settings.get("search", {}), dict) else {}
@@ -545,6 +578,7 @@ def build_demo() -> gr.Blocks:
         nonlocal current_language, translations
         current_language = selected_language
         translations = _resolved_translations(language_settings, selected_language)
+        set_session_label_language(selected_language)
         save_default_language(selected_language)
         return translations
 
@@ -567,8 +601,6 @@ def build_demo() -> gr.Blocks:
         for index in range(SESSION_BUTTON_SLOTS):
             if index < len(choices):
                 label, session_id = choices[index]
-                if label.startswith("New Chat"):
-                    label = label.replace("New Chat", tr("new_chat_button", "New Chat"), 1)
                 button_updates.append(
                     gr.update(
                         value=label,
@@ -922,6 +954,9 @@ def build_demo() -> gr.Blocks:
                 settings_heading = gr.Markdown(tr("settings_heading", "### Settings"))
                 settings_note = gr.Markdown(tr("settings_note", "<div class='drawer-note'>All settings live here and apply immediately after saving.</div>"))
 
+                common_section_label = gr.Markdown(
+                    f"<div class='settings-section-label'>{tr('settings_common', 'Common')}</div>"
+                )
                 with gr.Accordion(tr("search_accordion", "Search"), open=True) as search_accordion:
                     search_provider_dropdown = gr.Dropdown(
                         choices=[("Serper.dev", "serper.dev"), ("Tavily", "tavily")],
@@ -958,25 +993,6 @@ def build_demo() -> gr.Blocks:
                         placeholder=tr("serper_api_key_placeholder", "Paste Serper.dev API key"),
                     )
                     save_search_setting_button = gr.Button(value=tr("save_search_settings", "Save Search Settings"), variant="secondary")
-
-                with gr.Accordion(tr("server_accordion", "Server"), open=False) as server_accordion:
-                    new_server_name_input = gr.Textbox(
-                        label=translations.get("ai_server_name", "Ai Server Name"),
-                        placeholder=translations.get(
-                            "ai_server_name_msg",
-                            "Ex: GMK-K9, editable via manual editing, file name for settings: server_settings.json.",
-                        ),
-                    )
-                    new_address_input = gr.Textbox(
-                        label=translations.get("new_server_address", "New Server Address"),
-                        placeholder=translations.get("new_server_address_msg", "Ex. http://127.0.0.1"),
-                    )
-                    new_port_input = gr.Number(label=translations.get("new_server_port", "Port"), value=11434)
-                    new_default_server = gr.Checkbox(
-                        label=translations.get("default_start_setting", "Make the new host by default."),
-                        value=False,
-                    )
-                    add_server_button = gr.Button(value=translations.get("add_ai_server", "Add Ai Server"))
 
                 with gr.Accordion(tr("presets_accordion", "Presets"), open=False) as presets_accordion:
                     preset_dropdown = gr.Dropdown(
@@ -1032,6 +1048,9 @@ def build_demo() -> gr.Blocks:
                         save_persona_button = gr.Button(value=tr("save_persona", "Save Persona"), variant="secondary")
                         delete_persona_button = gr.Button(value=tr("delete_persona", "Delete Persona"), variant="secondary")
 
+                workspace_section_label = gr.Markdown(
+                    f"<div class='settings-section-label'>{tr('settings_workspace', 'Workspace')}</div>"
+                )
                 with gr.Accordion(tr("prompt_library_accordion", "Prompt Library"), open=False) as prompt_library_accordion:
                     prompt_dropdown = gr.Dropdown(
                         choices=prompt_choices,
@@ -1061,6 +1080,28 @@ def build_demo() -> gr.Blocks:
                         save_prompt_button = gr.Button(value=tr("save_prompt", "Save Prompt"), variant="secondary")
                         delete_prompt_button = gr.Button(value=tr("delete_prompt", "Delete Prompt"), variant="secondary")
                     insert_prompt_button = gr.Button(value=tr("insert_prompt", "Insert to Input"), variant="secondary")
+
+                system_section_label = gr.Markdown(
+                    f"<div class='settings-section-label'>{tr('settings_system', 'System')}</div>"
+                )
+                with gr.Accordion(tr("server_accordion", "Server"), open=False) as server_accordion:
+                    new_server_name_input = gr.Textbox(
+                        label=translations.get("ai_server_name", "Ai Server Name"),
+                        placeholder=translations.get(
+                            "ai_server_name_msg",
+                            "Ex: GMK-K9, editable via manual editing, file name for settings: server_settings.json.",
+                        ),
+                    )
+                    new_address_input = gr.Textbox(
+                        label=translations.get("new_server_address", "New Server Address"),
+                        placeholder=translations.get("new_server_address_msg", "Ex. http://127.0.0.1"),
+                    )
+                    new_port_input = gr.Number(label=translations.get("new_server_port", "Port"), value=11434)
+                    new_default_server = gr.Checkbox(
+                        label=translations.get("default_start_setting", "Make the new host by default."),
+                        value=False,
+                    )
+                    add_server_button = gr.Button(value=translations.get("add_ai_server", "Add Ai Server"))
 
                 with gr.Accordion(tr("advanced_accordion", "Advanced"), open=False) as advanced_accordion:
                     language_dropdown = gr.Dropdown(
@@ -1573,6 +1614,7 @@ def build_demo() -> gr.Blocks:
                 gr.update(value=new_translations.get("add_ai_server", "Add Ai Server")),
                 gr.update(value=new_translations.get("settings_heading", "### Settings")),
                 gr.update(value=new_translations.get("settings_note", "<div class='drawer-note'>All settings live here and apply immediately after saving.</div>")),
+                gr.update(value=f"<div class='settings-section-label'>{new_translations.get('settings_common', 'Common')}</div>"),
                 gr.update(label=new_translations.get("search_accordion", "Search")),
                 gr.update(label=new_translations.get("search_provider", "Search Provider")),
                 gr.update(
@@ -1621,6 +1663,7 @@ def build_demo() -> gr.Blocks:
                 gr.update(label=new_translations.get("default_preset", "Default Preset")),
                 gr.update(value=new_translations.get("save_persona", "Save Persona")),
                 gr.update(value=new_translations.get("delete_persona", "Delete Persona")),
+                gr.update(value=f"<div class='settings-section-label'>{new_translations.get('settings_workspace', 'Workspace')}</div>"),
                 gr.update(label=new_translations.get("prompt_library_accordion", "Prompt Library")),
                 gr.update(label=new_translations.get("prompt_label", "Prompt")),
                 gr.update(
@@ -1639,6 +1682,7 @@ def build_demo() -> gr.Blocks:
                 gr.update(value=new_translations.get("save_prompt", "Save Prompt")),
                 gr.update(value=new_translations.get("delete_prompt", "Delete Prompt")),
                 gr.update(value=new_translations.get("insert_prompt", "Insert to Input")),
+                gr.update(value=f"<div class='settings-section-label'>{new_translations.get('settings_system', 'System')}</div>"),
                 gr.update(label=new_translations.get("advanced_accordion", "Advanced")),
                 gr.update(label=new_translations.get("language_label", "Language"), value=selected_language),
                 gr.update(
@@ -1683,6 +1727,7 @@ def build_demo() -> gr.Blocks:
                 add_server_button,
                 settings_heading,
                 settings_note,
+                common_section_label,
                 search_accordion,
                 search_provider_dropdown,
                 search_num_results_slider,
@@ -1705,6 +1750,7 @@ def build_demo() -> gr.Blocks:
                 persona_default_preset_dropdown,
                 save_persona_button,
                 delete_persona_button,
+                workspace_section_label,
                 prompt_library_accordion,
                 prompt_dropdown,
                 prompt_name_input,
@@ -1714,6 +1760,7 @@ def build_demo() -> gr.Blocks:
                 save_prompt_button,
                 delete_prompt_button,
                 insert_prompt_button,
+                system_section_label,
                 advanced_accordion,
                 language_dropdown,
                 llm_temperature_view,

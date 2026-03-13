@@ -56,6 +56,7 @@ preset_service = PresetService()
 persona_service = PersonaService()
 prompt_service = PromptService()
 EXPORTS_DIR = Path(__file__).resolve().parents[2] / "exports"
+_SESSION_LABEL_LANGUAGE = "English"
 
 _STOPWORDS = {
     "the",
@@ -118,8 +119,26 @@ def create_new_chat_session() -> tuple[list[dict[str, str]], list[dict[str, str]
     return [], [], "Started a new chat."
 
 
+def set_session_label_language(language: str | None) -> None:
+    global _SESSION_LABEL_LANGUAGE
+    normalized = str(language or "").strip()
+    _SESSION_LABEL_LANGUAGE = normalized or "English"
+
+
+def _localized_new_chat_title(title: str) -> str:
+    normalized = title.strip() or "New Chat"
+    if normalized != "New Chat":
+        return normalized
+
+    if _SESSION_LABEL_LANGUAGE == "Chinese":
+        return "新增對話"
+    if _SESSION_LABEL_LANGUAGE == "Thailand":
+        return "แชตใหม่"
+    return "New Chat"
+
+
 def _build_session_choice_label(session: dict[str, object]) -> str:
-    title = str(session.get("title", "New Chat")).strip() or "New Chat"
+    title = _localized_new_chat_title(str(session.get("title", "New Chat")))
     if len(title) > 30:
         title = title[:27].rstrip() + "..."
     updated_at = _format_session_time(str(session.get("updated_at", "")).strip())
@@ -131,6 +150,25 @@ def _format_session_time(value: str) -> str:
         return ""
     try:
         dt = datetime.fromisoformat(value)
+        if _SESSION_LABEL_LANGUAGE == "Chinese":
+            return f"{dt.month}月{dt.day}日 {dt.strftime('%H:%M')}"
+        if _SESSION_LABEL_LANGUAGE == "Thailand":
+            thai_months = [
+                "",
+                "ม.ค.",
+                "ก.พ.",
+                "มี.ค.",
+                "เม.ย.",
+                "พ.ค.",
+                "มิ.ย.",
+                "ก.ค.",
+                "ส.ค.",
+                "ก.ย.",
+                "ต.ค.",
+                "พ.ย.",
+                "ธ.ค.",
+            ]
+            return f"{dt.day} {thai_months[dt.month]} {dt.strftime('%H:%M')}"
         return dt.strftime("%b %d %H:%M")
     except ValueError:
         return value[:16]
