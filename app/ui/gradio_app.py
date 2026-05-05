@@ -743,13 +743,13 @@ def build_demo() -> gr.Blocks:
 
     def handle_switch_session_button(session_id: str | None, search_query: str):
         button_updates, button_ids, selected_id = build_session_button_updates(session_id, search_query)
-        result = switch_chat_session_with_state(selected_id)
-        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result)
+        state, status = switch_chat_session_with_state(selected_id)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *_spread_session_state(state), status)
 
     def handle_create_session_button(search_query: str):
-        result = create_new_chat_session_with_state()
+        _dropdown_update, state, status = create_new_chat_session_with_state()
         button_updates, button_ids, selected_id = build_session_button_updates(None, search_query)
-        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result[1:])
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *_spread_session_state(state)[2:], status)
 
     def handle_rename_session_button(session_id: str | None, title: str, search_query: str):
         _dropdown_update, status = rename_chat_session(session_id, title)
@@ -757,14 +757,14 @@ def build_demo() -> gr.Blocks:
         return (*button_updates, *button_ids, selected_id, status)
 
     def handle_delete_session_button(session_id: str | None, search_query: str):
-        result = delete_chat_session_with_state(session_id)
+        _dropdown_update, state, status = delete_chat_session_with_state(session_id)
         button_updates, button_ids, selected_id = build_session_button_updates(None, search_query)
-        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result[1:])
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *_spread_session_state(state)[2:], status)
 
     def handle_clear_current_chat_button(search_query: str):
-        result = clear_current_chat_with_state()
+        state, status = clear_current_chat_with_state()
         button_updates, button_ids, selected_id = build_session_button_updates(None, search_query)
-        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *_spread_session_state(state), status)
 
     def handle_session_search_change(search_query: str, session_id: str | None):
         button_updates, button_ids, selected_id = build_session_button_updates(session_id, search_query)
@@ -799,16 +799,26 @@ def build_demo() -> gr.Blocks:
         return f"Model selected: {normalized_model}" if normalized_model else "Model cleared."
 
     def apply_preset_with_persistence(preset_id: str | None):
-        result = apply_preset_to_current_session(preset_id)
+        state, status = apply_preset_to_current_session(preset_id)
         persist_ui_preferences(preset_id=preset_id)
         update_current_session_preferences(preset_id=preset_id)
-        return result
+        return *_spread_preset_state(state), status
 
     def load_persona_with_persistence(persona_id: str | None):
-        result = load_selected_persona(persona_id)
+        state, status = load_selected_persona(persona_id)
         persist_ui_preferences(persona_id=persona_id)
         update_current_session_preferences(persona_id=persona_id)
-        return result
+        d = state.as_dict()
+        return [
+            d["persona_dropdown"], d["persona_name"], d["persona_description"],
+            d["persona_system_prompt"], d["persona_default_model"], d["persona_default_preset"],
+            d["preset_dropdown"], gr.update(value=d["model"]) if d["model"] is not None else gr.update(),
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+            status,
+        ]
 
     def save_preset_with_persistence(
         preset_id: str | None,
