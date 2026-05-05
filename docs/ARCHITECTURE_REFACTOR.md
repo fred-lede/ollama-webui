@@ -1,100 +1,102 @@
-# Architecture Refactor Plan
+# Architecture Snapshot
 
-## Target Structure
+This document reflects the current runtime split after the staged refactor away from a monolithic `chat_service.py`.
+
+## Current Structure
 
 ```text
 app/
-  orchestrator/
-    __init__.py
-    context.py
-    types.py
-    policy.py
-    intent_router.py
-    tool_runtime.py
-    response_renderer.py
-    orchestrator.py
-  services/
-    chat_service.py              # thin adapter only (legacy compatibility)
-  tools/
-    ...
-  ui/
-    gradio_app.py
+  main.py
   core/
+    app_settings.py
     cancellation.py
     config.py
-    app_settings.py
+    logging_setup.py
+    storage.py
+    tool_router.py
+  orchestrator/
+    __init__.py
+    auto_tool_planner.py
+    context.py
+    conversation_pipeline.py
+    intent_router.py
+    model_runtime.py
+    orchestrator.py
+    policy.py
+    response_renderer.py
+    tool_runtime.py
+    types.py
+  services/
+    chat_service.py
+    persona_service.py
+    preset_service.py
+    prompt_service.py
+    server_service.py
+    session_service.py
+  tools/
+    base.py
+    registry.py
+    implementations/
+    search_providers/
+  ui/
+    gradio_app.py
+data/
+  sessions.json
+  presets.json
+  personas.json
+  prompts.json
+exports/
 ```
 
-## Intent
+## Runtime Responsibilities
 
-Move from a monolithic `chat_service.py` to a layered runtime:
-- Deterministic routing first
-- Policy-guarded tool execution
-- Model summarization/response as a separate stage
-- Shared request context and typed outputs
+- `app/main.py`
+  - Process entry point. Configures logging and launches the Gradio app.
+- `app/ui/gradio_app.py`
+  - Builds the UI, localized labels, and event wiring.
+- `app/services/chat_service.py`
+  - UI-facing adapter for chat flow, streaming output, tool command handling, and markdown export.
+- `app/services/server_service.py`
+  - Ollama host management, model loading, and connection tests.
+- `app/services/session_service.py`
+  - Session CRUD backed by `data/sessions.json`.
+- `app/services/preset_service.py`
+  - LLM preset CRUD backed by `data/presets.json`.
+- `app/services/persona_service.py`
+  - Persona CRUD backed by `data/personas.json`.
+- `app/services/prompt_service.py`
+  - Prompt library CRUD backed by `data/prompts.json`.
 
-## First Batch (already scaffolded)
+## Orchestrator Responsibilities
 
-- `context.py`
-  - `RequestContext`
-  - `ModelOptions`
-  - `SearchSettings`
-- `types.py`
-  - `ToolCall`
-  - `ToolExecutionResult`
-  - `OrchestratorOutput`
-  - `OrchestratorStep`
-- `policy.py`
-  - `ToolPolicy` (enabled tools, trusted domains, retry/timeout defaults)
 - `intent_router.py`
-  - deterministic rule router for `datetime/calculator/fetch_url/web_search`
+  - Deterministic detection for time, calculator, fetch, and search intents.
+- `auto_tool_planner.py`
+  - Converts detected intent into direct tool execution or model-assisted follow-up.
 - `tool_runtime.py`
-  - one entry for policy-checked tool execution
-- `response_renderer.py`
-  - tool/error render helpers
-- `orchestrator.py`
-  - central `Orchestrator.process()` flow
+  - Executes tools behind policy and cancellation checks.
+- `model_runtime.py`
+  - Builds summarization prompts and handles model-call runtime concerns.
+- `conversation_pipeline.py`
+  - Holds legacy multi-step conversation flow used during the migration.
+- `orchestrator.py` and `types.py`
+  - Shared typed orchestration flow and outputs.
 
-## Migration Steps
+## Persistence Model
 
-1. Create compatibility adapter in `chat_service.py`
-- Keep public `ask_question_stream()` signature unchanged.
-- Build a `RequestContext` from UI inputs.
-- Invoke `Orchestrator` for deterministic tool intents.
+- Root config files:
+  - `server_settings.json`
+  - `app_settings.json`
+  - `language_settings.json`
+- JSON data store under `data/`:
+  - sessions
+  - presets
+  - personas
+  - prompts
+- Exported conversations are written to `exports/`.
 
-2. Move deterministic logic from `chat_service.py` to `intent_router.py`
-- time/calc/url/search detection
-- expression/url extraction helpers
+## Current Status
 
-3. Move tool execution wrappers to `tool_runtime.py`
-- current registry calls
-- cancellation checks
-- policy enforcement
-
-4. Keep model-only logic in `chat_service.py` temporarily
-- tool decision prompts
-- summary prompts
-- streaming response
-
-5. Final split
-- extract model-calling to a dedicated `model_runtime.py`
-- keep `chat_service.py` as transport adapter only
-
-## Acceptance Criteria
-
-- Existing UI behavior unchanged
-- All current tool flows still pass manual checks
-- `ask_question_stream()` reduced to orchestration + streaming adapter
-- No direct tool registry calls in UI layer
-
-## Suggested Next PR
-
-- Wire `Orchestrator` into `chat_service.py` for deterministic intents only.
-- Keep fallback to legacy behavior for non-deterministic cases.
-- Add 6 smoke tests:
-  - time
-  - calculator
-  - fetch_url
-  - web_search
-  - stop during tool flow
-  - clear history then ask new question
+- The refactor is functionally in place.
+- `chat_service.py` is still the main integration layer for the UI and retains some legacy flow coordination.
+- The orchestrator and service split already defines the practical architecture boundary for ongoing work.

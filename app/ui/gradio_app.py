@@ -1,12 +1,15 @@
 from __future__ import annotations
+from urllib.parse import urlparse
 
 import gradio as gr
 
-from app.core.config import load_language_settings, load_llm_parameters, load_search_settings, load_settings, save_default_language, save_llm_parameters, save_search_settings
 from app.core.normalizers import clamp_float, clamp_int, normalize_bool, normalize_provider, normalize_summary_length
+from app.core.config import load_search_settings, save_search_settings, load_llm_parameters, load_settings, save_default_language, save_llm_parameters, load_language_settings
+
+from app.ui.session_callbacks import SessionUIState
+from app.ui.preset_callbacks import PresetUIState
+
 from app.services.chat_service import (
-    PresetUIState,
-    SessionUIState,
     apply_preset_to_current_session,
     ask_question_stream,
     create_new_chat_session_with_state,
@@ -15,21 +18,26 @@ from app.services.chat_service import (
     delete_selected_prompt,
     delete_chat_session_with_state,
     export_current_chat_markdown,
+    get_current_session_preferences,
     list_chat_session_choices,
     list_persona_choices,
     list_preset_choices,
     list_prompt_choices,
     load_selected_prompt,
     load_current_chat_history,
+    is_session_pinned,
     load_selected_persona,
     rename_chat_session,
     save_persona,
     save_preset_from_values,
     save_prompt_entry,
     set_session_label_language,
+    clear_current_chat_with_state,
+    set_session_pinned,
     stop_response,
     switch_chat_session_with_state,
     insert_selected_prompt_into_workspace,
+    update_current_session_preferences,
 )
 from app.services.server_service import fetch_models, handle_add_server, handle_server_change, test_llm_connection
 
@@ -72,6 +80,10 @@ css = """
 }
 .status-light {
     min-width: 130px;
+}
+.toolbar-row {
+    gap: 8px;
+    flex-wrap: wrap;
 }
 .drawer-note {
     opacity: 0.85;
@@ -143,6 +155,37 @@ css = """
     border-radius: 999px;
     background: var(--session-accent);
 }
+@media (max-width: 1100px) {
+    .app-shell {
+        flex-wrap: wrap !important;
+    }
+    .sessions-panel,
+    .chat-panel,
+    .settings-panel {
+        min-width: 100% !important;
+        width: 100% !important;
+    }
+    .session-stack {
+        max-height: 220px;
+    }
+}
+@media (max-width: 720px) {
+    .toolbar-button {
+        min-width: calc(50% - 6px) !important;
+        width: calc(50% - 6px) !important;
+    }
+    .status-light {
+        min-width: 100%;
+    }
+    .session-item {
+        min-height: 40px !important;
+        height: 40px !important;
+    }
+}
+.quick-control-row {
+    gap: 8px;
+    margin-bottom: 8px;
+}
 """
 
 UI_DEFAULT_TRANSLATIONS = {
@@ -164,6 +207,10 @@ UI_DEFAULT_TRANSLATIONS = {
         "stop_button": "Stop Answer",
         "clean_answer_button": "Clear Answer",
         "sessions_heading": "### Sessions",
+        "session_search": "Search Sessions",
+        "session_search_placeholder": "Filter by title or time",
+        "pin_session": "Pin Session",
+        "unpin_session": "Unpin Session",
         "session_title": "Session Title",
         "rename_current_chat": "Rename current chat",
         "new_chat_button": "New Chat",
@@ -202,11 +249,11 @@ UI_DEFAULT_TRANSLATIONS = {
         "personas_accordion": "Personas",
         "persona_label": "Persona",
         "persona_name": "Persona Name",
-        "persona_placeholder": "Create or update a persona",
+        "persona_placeholder": "Example: Code Reviewer / Travel Planner / PM Assistant",
         "persona_description": "Description",
-        "persona_description_placeholder": "Short note about this persona",
+        "persona_description_placeholder": "Example: concise reviewer focused on bugs, risks, and regressions",
         "system_prompt": "System Prompt",
-        "system_prompt_placeholder": "You are a pragmatic assistant...",
+        "system_prompt_placeholder": "Example: You are a senior code reviewer. Prioritize bugs, risks, and missing tests.",
         "default_model": "Default Model",
         "default_preset": "Default Preset",
         "save_persona": "Save Persona",
@@ -268,6 +315,10 @@ UI_DEFAULT_TRANSLATIONS = {
         "stop_button": "停止回答",
         "clean_answer_button": "清除回答",
         "sessions_heading": "### 對話列表",
+        "session_search": "搜尋對話",
+        "session_search_placeholder": "依標題或時間篩選",
+        "pin_session": "置頂對話",
+        "unpin_session": "取消置頂",
         "session_title": "對話標題",
         "rename_current_chat": "重新命名目前對話",
         "new_chat_button": "新增對話",
@@ -306,11 +357,11 @@ UI_DEFAULT_TRANSLATIONS = {
         "personas_accordion": "角色",
         "persona_label": "角色",
         "persona_name": "角色名稱",
-        "persona_placeholder": "建立或更新角色",
+        "persona_placeholder": "例如：程式碼審查助手 / 旅遊規劃助手 / PM 助手",
         "persona_description": "描述",
-        "persona_description_placeholder": "簡短說明這個角色的用途",
+        "persona_description_placeholder": "例如：回答精簡，優先指出 bug、風險與回歸問題",
         "system_prompt": "系統提示詞",
-        "system_prompt_placeholder": "你是一個務實的助理……",
+        "system_prompt_placeholder": "例如：你是一位資深程式碼審查員，優先指出 bug、風險與缺少的測試。",
         "default_model": "預設模型",
         "default_preset": "預設組合",
         "save_persona": "儲存角色",
@@ -372,6 +423,10 @@ UI_DEFAULT_TRANSLATIONS = {
         "stop_button": "หยุดคำตอบ",
         "clean_answer_button": "ล้างคำตอบ",
         "sessions_heading": "### รายการแชต",
+        "session_search": "ค้นหาแชต",
+        "session_search_placeholder": "กรองตามชื่อหรือเวลา",
+        "pin_session": "ปักหมุดแชต",
+        "unpin_session": "เลิกปักหมุด",
         "session_title": "ชื่อแชต",
         "rename_current_chat": "เปลี่ยนชื่อแชตปัจจุบัน",
         "new_chat_button": "แชตใหม่",
@@ -410,11 +465,11 @@ UI_DEFAULT_TRANSLATIONS = {
         "personas_accordion": "บทบาท",
         "persona_label": "บทบาท",
         "persona_name": "ชื่อบทบาท",
-        "persona_placeholder": "สร้างหรืออัปเดตบทบาท",
+        "persona_placeholder": "ตัวอย่าง: ผู้ช่วยรีวิวโค้ด / ผู้ช่วยวางแผนทริป / ผู้ช่วย PM",
         "persona_description": "คำอธิบาย",
-        "persona_description_placeholder": "คำอธิบายสั้น ๆ เกี่ยวกับบทบาทนี้",
+        "persona_description_placeholder": "ตัวอย่าง: ตอบสั้นและเน้น bug ความเสี่ยง และ regression",
         "system_prompt": "System Prompt",
-        "system_prompt_placeholder": "คุณคือผู้ช่วยที่เน้นการทำงานจริง...",
+        "system_prompt_placeholder": "ตัวอย่าง: คุณคือผู้รีวิวโค้ดระดับอาวุโส ให้เน้น bug ความเสี่ยง และ test ที่ขาด",
         "default_model": "โมเดลเริ่มต้น",
         "default_preset": "พรีเซ็ตเริ่มต้น",
         "save_persona": "บันทึกบทบาท",
@@ -463,11 +518,8 @@ UI_DEFAULT_TRANSLATIONS = {
 
 def _resolved_translations(language_settings: dict, selected_language: str) -> dict:
     merged = dict(UI_DEFAULT_TRANSLATIONS["English"])
-    languages_block = language_settings.get("languages", {})
-    if not isinstance(languages_block, dict):
-        languages_block = {}
-    english_translations = languages_block.get("English", {})
-    selected_translations = languages_block.get(selected_language, {})
+    english_translations = language_settings.get("languages", {}).get("English", {})
+    selected_translations = language_settings.get("languages", {}).get(selected_language, {})
     if isinstance(english_translations, dict):
         merged.update(english_translations)
     if isinstance(selected_translations, dict):
@@ -503,6 +555,77 @@ def export_chat_ui() -> str:
         return f"{status}: {export_path}"
     return status
 
+def clamp_float(value: float | int | str, minimum: float, maximum: float, default: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
+
+
+def clamp_int(value: float | int | str, minimum: int, maximum: int, default: int) -> int:
+    try:
+        parsed = int(float(value))
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
+
+
+def normalize_provider(value: str) -> str:
+    v = (value or "").strip().lower()
+    if v in {"serper", "serper.dev", "serper_dev"}:
+        return "serper.dev"
+    if v == "tavily":
+        return "tavily"
+    return "serper.dev"
+
+
+def normalize_summary_length(value: str) -> str:
+    v = (value or "").strip().lower()
+    if v in {"short", "medium", "long"}:
+        return v
+    return "medium"
+
+
+def normalize_bool(value: object, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in {"true", "1", "yes", "on"}:
+            return True
+        if v in {"false", "0", "no", "off"}:
+            return False
+    return default
+
+
+
+def _spread_session_state(state: SessionUIState) -> list:
+    d = state.as_dict()
+    return [
+        state.history, state.history,
+        d["preset_dropdown"], d["preset_name"],
+        d["persona_dropdown"], d["persona_name"], d["persona_description"],
+        d["persona_system_prompt"], d["persona_default_model"], d["persona_default_preset"],
+        gr.update(value=d["model"]) if d["model"] is not None else gr.update(),
+        d["llm_temperature"], d["llm_max_tokens"],
+        d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+        d["llm_temperature"], d["llm_max_tokens"],
+        d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+    ]
+
+
+def _spread_preset_state(state: PresetUIState) -> list:
+    d = state.as_dict()
+    return [
+        d["preset_dropdown"], d["preset_name"],
+        d["llm_temperature"], d["llm_max_tokens"],
+        d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+        d["llm_temperature"], d["llm_max_tokens"],
+        d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+    ]
+
+
 def build_demo() -> gr.Blocks:
     language_settings = load_language_settings()
     current_language = language_settings.get("default_language", "English")
@@ -524,11 +647,7 @@ def build_demo() -> gr.Blocks:
     default_llm_num_ctx = clamp_int(llm_defaults.get("llm_num_ctx", 2048), 1, 131072, 2048)
 
     hosts, default_host = load_settings()
-    server_choices = [
-        (str(host.get("server_name", "Unknown")), f"{host.get('address', 'http://127.0.0.1')}:{host.get('port', 11434)}")
-        for host in hosts
-        if isinstance(host, dict) and host.get("address")
-    ]
+    server_choices = [(str(host.get("server_name", "Server")), f"{host.get('address', '')}:{host.get('port', 11434)}") for host in hosts if isinstance(host, dict) and host.get("address")]
     current_host = f"{default_host.get('address', '')}:{default_host.get('port', 11434)}" if default_host else None
     models = fetch_models(default_host.get("address", ""), default_host.get("port", 11434)) if default_host else []
     initial_history = load_current_chat_history()
@@ -536,6 +655,19 @@ def build_demo() -> gr.Blocks:
     preset_choices, current_preset_id = list_preset_choices()
     persona_choices, current_persona_id = list_persona_choices()
     prompt_choices, current_prompt_id = list_prompt_choices()
+    current_model = models[0] if models else None
+    if current_model and current_model not in models:
+        models = [*models, current_model]
+    current_preset_id = (
+        str(ui_settings.get("last_selected_preset_id") or "").strip()
+        or session_preferences["preset_id"]
+        or current_preset_id
+    )
+    current_persona_id = (
+        str(ui_settings.get("last_selected_persona_id") or "").strip()
+        or session_preferences["persona_id"]
+        or current_persona_id
+    )
     current_preset_name = next((label for label, value in preset_choices if value == current_preset_id), "")
     current_persona_name = next((label for label, value in persona_choices if value == current_persona_id), "")
 
@@ -556,10 +688,41 @@ def build_demo() -> gr.Blocks:
     def settings_button_label(is_open: bool) -> str:
         return tr("settings_close", "Close Settings") if is_open else tr("settings_open", "Settings")
 
+    def persist_ui_preferences(
+        *,
+        server: str | None = None,
+        model: str | None = None,
+        preset_id: str | None = None,
+        persona_id: str | None = None,
+    ) -> None:
+        existing = load_search_settings()
+        ui_config = existing.get("ui", {}) if isinstance(existing.get("ui", {}), dict) else {}
+        if server is not None:
+            ui_config["last_selected_server"] = server
+        if model is not None:
+            ui_config["last_selected_model"] = model
+        if preset_id is not None:
+            ui_config["last_selected_preset_id"] = preset_id
+        if persona_id is not None:
+            ui_config["last_selected_persona_id"] = persona_id
+        existing["ui"] = ui_config
+        save_search_settings(existing)
+
+    def pin_button_label(is_pinned: bool) -> str:
+        return tr("unpin_session", "Unpin Session") if is_pinned else tr("pin_session", "Pin Session")
+
     SESSION_BUTTON_SLOTS = 12
 
-    def build_session_button_updates(active_session_id: str | None):
+    def filtered_session_choices(search_query: str | None):
         choices, current_id = list_chat_session_choices()
+        normalized = (search_query or "").strip().lower()
+        if not normalized:
+            return choices, current_id
+        filtered = [(label, session_id) for label, session_id in choices if normalized in label.lower()]
+        return filtered, current_id
+
+    def build_session_button_updates(active_session_id: str | None, search_query: str | None = None):
+        choices, current_id = filtered_session_choices(search_query)
         selected_id = active_session_id or current_id
         button_updates = []
         button_ids = []
@@ -579,89 +742,117 @@ def build_demo() -> gr.Blocks:
                 button_ids.append(None)
         return button_updates, button_ids, selected_id
 
-    def build_session_variant_updates(active_session_id: str | None):
-        choices, current_id = list_chat_session_choices()
-        selected_id = active_session_id or current_id
-        button_updates = []
-        button_ids = []
-        for index in range(SESSION_BUTTON_SLOTS):
-            if index < len(choices):
-                _label, session_id = choices[index]
-                button_updates.append(gr.update(variant="primary" if session_id == selected_id else "secondary"))
-                button_ids.append(session_id)
-            else:
-                button_updates.append(gr.update())
-                button_ids.append(None)
-        return button_updates, button_ids, selected_id
+    def handle_switch_session_button(session_id: str | None, search_query: str):
+        button_updates, button_ids, selected_id = build_session_button_updates(session_id, search_query)
+        result = switch_chat_session_with_state(selected_id)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result)
 
-    def _spread_session_state(state: SessionUIState) -> list:
-        d = state.as_dict()
-        return [
-            state.history, state.history,
-            d["preset_dropdown"], d["preset_name"],
-            d["persona_dropdown"], d["persona_name"], d["persona_description"],
-            d["persona_system_prompt"], d["persona_default_model"],
-            d["persona_default_preset"],
-        gr.update(value=d["model"]) if d["model"] is not None else gr.update(),
-            d["llm_temperature"], d["llm_max_tokens"],
-            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
-            d["llm_temperature"], d["llm_max_tokens"],
-            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
-        ]
+    def handle_create_session_button(search_query: str):
+        result = create_new_chat_session_with_state()
+        button_updates, button_ids, selected_id = build_session_button_updates(None, search_query)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result[1:])
 
-
-    def _spread_preset_state(state: PresetUIState) -> list:
-        d = state.as_dict()
-        return [
-            d["preset_dropdown"], d["preset_name"],
-            d["llm_temperature"], d["llm_max_tokens"],
-            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
-            d["llm_temperature"], d["llm_max_tokens"],
-            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
-        ]
-
-
-    def handle_switch_session_button(session_id: str | None):
-        button_updates, button_ids, selected_id = build_session_variant_updates(session_id)
-        state, status = switch_chat_session_with_state(selected_id)
-        return (*button_updates, *button_ids, selected_id, *_spread_session_state(state), status)
-
-    def handle_create_session_button():
-        _dropdown_update, state, status = create_new_chat_session_with_state()
-        button_updates, button_ids, selected_id = build_session_button_updates(None)
-        return (*button_updates, *button_ids, selected_id, *_spread_session_state(state), status)
-
-    def handle_rename_session_button(session_id: str | None, title: str):
+    def handle_rename_session_button(session_id: str | None, title: str, search_query: str):
         _dropdown_update, status = rename_chat_session(session_id, title)
-        button_updates, button_ids, selected_id = build_session_button_updates(session_id)
+        button_updates, button_ids, selected_id = build_session_button_updates(session_id, search_query)
         return (*button_updates, *button_ids, selected_id, status)
 
-    def handle_delete_session_button(session_id: str | None):
-        _dropdown_update, state, status = delete_chat_session_with_state(session_id)
-        button_updates, button_ids, selected_id = build_session_button_updates(None)
-        return (*button_updates, *button_ids, selected_id, *_spread_session_state(state), status)
+    def handle_delete_session_button(session_id: str | None, search_query: str):
+        result = delete_chat_session_with_state(session_id)
+        button_updates, button_ids, selected_id = build_session_button_updates(None, search_query)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result[1:])
 
+    def handle_clear_current_chat_button(search_query: str):
+        result = clear_current_chat_with_state()
+        button_updates, button_ids, selected_id = build_session_button_updates(None, search_query)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), *result)
 
-    def handle_apply_preset(preset_id: str | None):
-        state, status = apply_preset_to_current_session(preset_id)
-        return *_spread_preset_state(state), status
+    def handle_session_search_change(search_query: str, session_id: str | None):
+        button_updates, button_ids, selected_id = build_session_button_updates(session_id, search_query)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(is_session_pinned(selected_id))), search_query)
 
+    def handle_toggle_pin_session(session_id: str | None, search_query: str):
+        currently_pinned = is_session_pinned(session_id)
+        status = set_session_pinned(session_id, not currently_pinned)
+        next_pinned = is_session_pinned(session_id)
+        button_updates, button_ids, selected_id = build_session_button_updates(session_id, search_query)
+        return (*button_updates, *button_ids, selected_id, gr.update(value=pin_button_label(next_pinned)), status)
 
-    def handle_load_persona(persona_id: str | None):
-        state, status = load_selected_persona(persona_id)
-        d = state.as_dict()
-        return [
-            d["persona_dropdown"], d["persona_name"], d["persona_description"],
-            d["persona_system_prompt"], d["persona_default_model"],
-            d["persona_default_preset"],
-            d["preset_dropdown"],
-        gr.update(value=d["model"]) if d["model"] is not None else gr.update(),
-            d["llm_temperature"], d["llm_max_tokens"],
-            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
-            d["llm_temperature"], d["llm_max_tokens"],
-            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
-            status,
-        ]
+    def handle_server_change_persisted(selected_server: str | None):
+        status, model_update, server_value = handle_server_change(selected_server)
+        normalized_server = str(server_value or selected_server or "").strip() or None
+        next_model = model_update.get("value") if isinstance(model_update, dict) else None
+        persist_ui_preferences(
+            server=normalized_server,
+            model=str(next_model or "").strip() or None,
+        )
+        update_current_session_preferences(
+            server=normalized_server,
+            model=str(next_model or "").strip() or None,
+        )
+        return status, model_update, server_value
+
+    def handle_model_change_persisted(selected_model: str | None, selected_server: str | None):
+        normalized_model = str(selected_model or "").strip() or None
+        normalized_server = str(selected_server or "").strip() or None
+        persist_ui_preferences(server=normalized_server, model=normalized_model)
+        update_current_session_preferences(server=normalized_server, model=normalized_model)
+        return f"Model selected: {normalized_model}" if normalized_model else "Model cleared."
+
+    def apply_preset_with_persistence(preset_id: str | None):
+        result = apply_preset_to_current_session(preset_id)
+        persist_ui_preferences(preset_id=preset_id)
+        update_current_session_preferences(preset_id=preset_id)
+        return result
+
+    def load_persona_with_persistence(persona_id: str | None):
+        result = load_selected_persona(persona_id)
+        persist_ui_preferences(persona_id=persona_id)
+        update_current_session_preferences(persona_id=persona_id)
+        return result
+
+    def save_preset_with_persistence(
+        preset_id: str | None,
+        name: str,
+        temperature: float,
+        max_tokens: float,
+        top_p: float,
+        typical_p: float,
+        num_ctx: float,
+    ):
+        result = save_preset_from_values(preset_id, name, temperature, max_tokens, top_p, typical_p, num_ctx)
+        selected_value = result[0].get("value") if isinstance(result[0], dict) else None
+        persist_ui_preferences(preset_id=str(selected_value or "").strip() or None)
+        update_current_session_preferences(preset_id=str(selected_value or "").strip() or None)
+        return result
+
+    def save_persona_with_persistence(
+        persona_id: str | None,
+        name: str,
+        description: str,
+        system_prompt: str,
+        default_model: str | None,
+        default_preset: str | None,
+    ):
+        result = save_persona(persona_id, name, description, system_prompt, default_model, default_preset)
+        selected_value = result[0].get("value") if isinstance(result[0], dict) else None
+        persist_ui_preferences(persona_id=str(selected_value or "").strip() or None)
+        update_current_session_preferences(persona_id=str(selected_value or "").strip() or None)
+        return result
+
+    def delete_preset_with_persistence(preset_id: str | None):
+        result = delete_selected_preset(preset_id)
+        selected_value = result[0].get("value") if isinstance(result[0], dict) else None
+        persist_ui_preferences(preset_id=str(selected_value or "").strip() or None)
+        update_current_session_preferences(preset_id=str(selected_value or "").strip() or None)
+        return result
+
+    def delete_persona_with_persistence(persona_id: str | None):
+        result = delete_selected_persona(persona_id)
+        selected_value = result[0].get("value") if isinstance(result[0], dict) else None
+        persist_ui_preferences(persona_id=str(selected_value or "").strip() or None)
+        update_current_session_preferences(persona_id=str(selected_value or "").strip() or None)
+        return result
 
     def toggle_web_search(enabled: bool):
         new_enabled = not bool(enabled)
@@ -812,12 +1003,16 @@ def build_demo() -> gr.Blocks:
         search_num_results_state = gr.State(default_search_num_results)
         search_summary_length_state = gr.State(default_search_summary_length)
         session_id_state = gr.State(current_session_id)
-
-        with gr.Row(equal_height=False):
-            with gr.Column(scale=2):
+        session_search_state = gr.State(value="")
+        with gr.Row(equal_height=False, elem_classes=["app-shell"]):
+            with gr.Column(scale=2, elem_classes=["sessions-panel"]):
                 sessions_heading = gr.Markdown(tr("sessions_heading", "### Sessions"))
                 session_button_updates, session_button_ids, _selected_session_id = build_session_button_updates(current_session_id)
                 session_button_states = [gr.State(value=session_id) for session_id in session_button_ids]
+                session_search_input = gr.Textbox(
+                    label=tr("session_search", "Search Sessions"),
+                    placeholder=tr("session_search_placeholder", "Filter by title or time"),
+                )
                 with gr.Column(elem_id="session-list", elem_classes=["session-stack"]):
                     session_buttons = []
                     for index in range(SESSION_BUTTON_SLOTS):
@@ -833,11 +1028,15 @@ def build_demo() -> gr.Blocks:
                     placeholder=tr("rename_current_chat", "Rename current chat"),
                 )
                 with gr.Row():
+                    pin_session_button = gr.Button(
+                        value=pin_button_label(is_session_pinned(current_session_id)),
+                        variant="secondary",
+                    )
                     new_session_button = gr.Button(value=tr("new_chat_button", "New Chat"), variant="primary")
                     rename_session_button = gr.Button(value=tr("rename_button", "Rename"), variant="secondary")
                     delete_session_button = gr.Button(value=tr("delete_button", "Delete"), variant="secondary")
 
-            with gr.Column(scale=9):
+            with gr.Column(scale=9, elem_classes=["chat-panel"]):
                 with gr.Row():
                     server_dropdown = gr.Dropdown(
                         choices=server_choices,
@@ -850,7 +1049,7 @@ def build_demo() -> gr.Blocks:
                         choices=models,
                         allow_custom_value=True,
                         label=translations.get("select_model", "Select Model"),
-                        value=models[0] if models else None,
+                        value=current_model,
                         scale=3,
                     )
                     web_search_enabled = gr.Checkbox(value=default_web_search_enabled, visible=False)
@@ -860,6 +1059,22 @@ def build_demo() -> gr.Blocks:
                         scale=2,
                     )
                     settings_toggle_button = gr.Button(value=settings_button_label(False), variant="secondary", scale=2)
+
+                with gr.Row(elem_classes=["quick-control-row"]):
+                    preset_dropdown = gr.Dropdown(
+                        choices=preset_choices,
+                        value=current_preset_id,
+                        label=tr("preset_label", "Preset"),
+                        interactive=True,
+                        scale=1,
+                    )
+                    persona_dropdown = gr.Dropdown(
+                        choices=persona_choices,
+                        value=current_persona_id,
+                        label=tr("persona_label", "Persona"),
+                        interactive=True,
+                        scale=1,
+                    )
 
                 chatbot = gr.Chatbot(
                     buttons=["copy", "copy_all"],
@@ -871,17 +1086,13 @@ def build_demo() -> gr.Blocks:
                 question_input = gr.MultimodalTextbox(
                     interactive=True,
                     autoscroll=True,
-                    file_count="multiple",
-                    placeholder=translations.get("enter_question", "Enter your question or upload files with question..."),
+                    file_count="single",
+                    placeholder=translations.get("enter_question", "Enter your question or upload image file with question..."),
                     show_label=False,
-                    file_types=[
-                        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif", ".tiff",
-                        ".pdf", ".txt", ".md", ".csv", ".json", ".xml", ".yaml", ".yml", ".log",
-                        ".docx", ".xlsx", ".pptx",
-                    ],
+                    file_types=[".jpg", ".jpeg", ".png", ".bmp"],
                 )
 
-                with gr.Row(equal_height=True):
+                with gr.Row(equal_height=True, elem_classes=["toolbar-row"]):
                     test_llm_connection_button = gr.Button(
                         value=tr("test_connection", "Test Connection"),
                         elem_classes=["my-button", "toolbar-button"],
@@ -918,7 +1129,8 @@ def build_demo() -> gr.Blocks:
                         "status_display_msg",
                         "Displaying the model's status or displaying an error message.",
                     ),
-                    lines=1,
+                    lines=2,
+                    max_lines=3,
                 )
                 llm_temperature = gr.Slider(
                     0,
@@ -968,7 +1180,7 @@ def build_demo() -> gr.Blocks:
                     additional_outputs=[status_output],
                 )
 
-            with gr.Column(scale=4, visible=False) as settings_drawer:
+            with gr.Column(scale=4, visible=False, elem_classes=["settings-panel"]) as settings_drawer:
                 settings_heading = gr.Markdown(tr("settings_heading", "### Settings"))
                 settings_note = gr.Markdown(tr("settings_note", "<div class='drawer-note'>All settings live here and apply immediately after saving.</div>"))
 
@@ -1013,12 +1225,6 @@ def build_demo() -> gr.Blocks:
                     save_search_setting_button = gr.Button(value=tr("save_search_settings", "Save Search Settings"), variant="secondary")
 
                 with gr.Accordion(tr("presets_accordion", "Presets"), open=False) as presets_accordion:
-                    preset_dropdown = gr.Dropdown(
-                        choices=preset_choices,
-                        value=current_preset_id,
-                        label=tr("preset_label", "Preset"),
-                        interactive=True,
-                    )
                     preset_name_input = gr.Textbox(
                         label=tr("preset_name", "Preset Name"),
                         value=current_preset_name,
@@ -1029,12 +1235,6 @@ def build_demo() -> gr.Blocks:
                         delete_preset_button = gr.Button(value=tr("delete_preset", "Delete Preset"), variant="secondary")
 
                 with gr.Accordion(tr("personas_accordion", "Personas"), open=False) as personas_accordion:
-                    persona_dropdown = gr.Dropdown(
-                        choices=persona_choices,
-                        value=current_persona_id,
-                        label=tr("persona_label", "Persona"),
-                        interactive=True,
-                    )
                     persona_name_input = gr.Textbox(
                         label=tr("persona_name", "Persona Name"),
                         value=current_persona_name,
@@ -1123,7 +1323,7 @@ def build_demo() -> gr.Blocks:
 
                 with gr.Accordion(tr("advanced_accordion", "Advanced"), open=False) as advanced_accordion:
                     language_dropdown = gr.Dropdown(
-                        choices=list((language_settings.get("languages") or {}).keys()) if isinstance(language_settings.get("languages"), dict) else ["English"],
+                        choices=list(language_settings["languages"].keys()),
                         label=tr("language_label", "Language"),
                         value=current_language,
                         interactive=True,
@@ -1274,7 +1474,7 @@ def build_demo() -> gr.Blocks:
         llm_num_ctx_view.change(lambda x: x, inputs=[llm_num_ctx_view], outputs=[llm_num_ctx], queue=False)
 
         preset_dropdown.change(
-            fn=handle_apply_preset,
+            fn=apply_preset_with_persistence,
             inputs=[preset_dropdown],
             outputs=[
                 preset_dropdown,
@@ -1295,7 +1495,7 @@ def build_demo() -> gr.Blocks:
         )
 
         save_preset_button.click(
-            fn=save_preset_from_values,
+            fn=save_preset_with_persistence,
             inputs=[
                 preset_dropdown,
                 preset_name_input,
@@ -1310,14 +1510,14 @@ def build_demo() -> gr.Blocks:
         )
 
         delete_preset_button.click(
-            fn=delete_selected_preset,
+            fn=delete_preset_with_persistence,
             inputs=[preset_dropdown],
             outputs=[preset_dropdown, persona_default_preset_dropdown, status_output],
             queue=False,
         )
 
         persona_dropdown.change(
-            fn=handle_load_persona,
+            fn=load_persona_with_persistence,
             inputs=[persona_dropdown],
             outputs=[
                 persona_dropdown,
@@ -1344,7 +1544,7 @@ def build_demo() -> gr.Blocks:
         )
 
         save_persona_button.click(
-            fn=save_persona,
+            fn=save_persona_with_persistence,
             inputs=[
                 persona_dropdown,
                 persona_name_input,
@@ -1358,7 +1558,7 @@ def build_demo() -> gr.Blocks:
         )
 
         delete_persona_button.click(
-            fn=delete_selected_persona,
+            fn=delete_persona_with_persistence,
             inputs=[persona_dropdown],
             outputs=[
                 persona_dropdown,
@@ -1488,9 +1688,16 @@ def build_demo() -> gr.Blocks:
         )
 
         server_dropdown.change(
-            handle_server_change,
+            handle_server_change_persisted,
             inputs=[server_dropdown],
             outputs=[status_output, model_dropdown, server_name],
+        )
+
+        model_dropdown.change(
+            fn=handle_model_change_persisted,
+            inputs=[model_dropdown, server_dropdown],
+            outputs=[status_output],
+            queue=False,
         )
 
         stop_button.click(
@@ -1511,6 +1718,7 @@ def build_demo() -> gr.Blocks:
             *session_buttons,
             *session_button_states,
             session_id_state,
+            pin_session_button,
             chatbot,
             chat_interface.chatbot_state,
             preset_dropdown,
@@ -1535,38 +1743,52 @@ def build_demo() -> gr.Blocks:
             status_output,
         ]
 
+        session_search_input.change(
+            fn=handle_session_search_change,
+            inputs=[session_search_input, session_id_state],
+            outputs=[*session_buttons, *session_button_states, session_id_state, pin_session_button, session_search_state],
+            queue=False,
+        )
+
+        pin_session_button.click(
+            fn=handle_toggle_pin_session,
+            inputs=[session_id_state, session_search_state],
+            outputs=[*session_buttons, *session_button_states, session_id_state, pin_session_button, status_output],
+            queue=False,
+        )
+
         for button, button_state in zip(session_buttons, session_button_states):
             button.click(
                 fn=handle_switch_session_button,
-                inputs=[button_state],
+                inputs=[button_state, session_search_state],
                 outputs=session_list_outputs,
                 queue=False,
             )
 
         new_session_button.click(
             fn=handle_create_session_button,
-            inputs=[],
+            inputs=[session_search_state],
             outputs=session_list_outputs,
             queue=False,
         )
 
         rename_session_button.click(
             fn=handle_rename_session_button,
-            inputs=[session_id_state, rename_session_input],
+            inputs=[session_id_state, rename_session_input, session_search_state],
             outputs=[*session_buttons, *session_button_states, session_id_state, status_output],
             queue=False,
         )
 
         delete_session_button.click(
             fn=handle_delete_session_button,
-            inputs=[session_id_state],
+            inputs=[session_id_state, session_search_state],
             outputs=session_list_outputs,
             queue=False,
         )
 
         clean_answer_button.click(
-            fn=handle_create_session_button,
-            inputs=[],
+            fn=handle_clear_current_chat_button,
+            inputs=[session_search_state],
             outputs=session_list_outputs,
             queue=False,
         )
@@ -1580,8 +1802,15 @@ def build_demo() -> gr.Blocks:
                 gr.update(value=new_translations.get("sessions_heading", "### Sessions")),
                 *session_updates,
                 gr.update(
+                    label=new_translations.get("session_search", "Search Sessions"),
+                    placeholder=new_translations.get("session_search_placeholder", "Filter by title or time"),
+                ),
+                gr.update(
                     label=new_translations.get("session_title", "Session Title"),
                     placeholder=new_translations.get("rename_current_chat", "Rename current chat"),
+                ),
+                gr.update(
+                    value=pin_button_label(is_session_pinned(current_session_value))
                 ),
                 gr.update(value=new_translations.get("new_chat_button", "New Chat")),
                 gr.update(value=new_translations.get("rename_button", "Rename")),
@@ -1589,6 +1818,8 @@ def build_demo() -> gr.Blocks:
                 gr.update(label=new_translations.get("select_server", "Select Server")),
                 gr.update(label=new_translations.get("server_address", "Server Address")),
                 gr.update(label=new_translations.get("select_model", "Select Model")),
+                gr.update(label=new_translations.get("preset_label", "Preset")),
+                gr.update(label=new_translations.get("persona_label", "Persona")),
                 gr.update(
                     value=new_translations.get("web_search_on", "Web Search: ON")
                     if web_search_enabled_value
@@ -1724,13 +1955,17 @@ def build_demo() -> gr.Blocks:
                 title_markdown,
                 sessions_heading,
                 *session_buttons,
+                session_search_input,
                 rename_session_input,
+                pin_session_button,
                 new_session_button,
                 rename_session_button,
                 delete_session_button,
                 server_dropdown,
                 server_name,
                 model_dropdown,
+                preset_dropdown,
+                persona_dropdown,
                 web_search_toggle,
                 settings_toggle_button,
                 test_llm_connection_button,

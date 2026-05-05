@@ -78,6 +78,136 @@ _STOPWORDS = {
     "where",
 }
 
+
+# --- Re-exports from extracted UI callback modules ---
+from app.ui.session_callbacks import (  # noqa: E402
+    SessionUIState,
+    _get_or_create_current_session,
+    _session_messages_to_history,
+    create_new_chat_session,
+    create_new_chat_session_with_choices,
+    create_new_chat_session_with_state,
+    create_new_chat_session_with_dataset_state,
+    clear_current_chat_with_state,
+    delete_chat_session,
+    delete_chat_session_with_state,
+    delete_chat_session_with_dataset_state,
+    get_current_session_preferences,
+    is_session_pinned,
+    list_chat_session_choices,
+    load_current_chat_history,
+    rename_chat_session,
+    rename_chat_session_from_state,
+    set_session_label_language,
+    set_session_pinned,
+    switch_chat_session,
+    switch_chat_session_with_state,
+    switch_chat_session_from_dataset,
+    update_current_session_preferences,
+)
+from app.ui.preset_callbacks import (  # noqa: E402
+    PresetUIState,
+    apply_preset_to_current_session,
+    delete_selected_preset,
+    list_preset_choices,
+    save_preset_from_values,
+)
+from app.ui.persona_callbacks import (  # noqa: E402
+    delete_selected_persona,
+    list_persona_choices,
+    load_selected_persona,
+    save_persona,
+)
+from app.ui.prompt_callbacks import (  # noqa: E402
+    delete_selected_prompt,
+    insert_selected_prompt_into_workspace,
+    list_prompt_choices,
+    load_selected_prompt,
+    save_prompt_entry,
+)
+from app.ui.export_callbacks import export_current_chat_markdown  # noqa: E402
+
+# --- Chat core (streaming, tools, model calls) ---_ import annotations
+
+import json
+import logging
+from app.core.file_processor import process_uploaded_files
+import re
+import time
+from pathlib import Path
+from urllib.parse import urlparse
+
+import gradio as gr
+import requests
+
+from app.core.cancellation import (
+    OperationCancelled,
+    clear_stop,
+    ensure_not_stopped,
+    request_stop,
+)
+from app.orchestrator import (
+    AutoToolAction,
+    AutoToolPlanner,
+    DirectAction,
+    FetchForLlmAction,
+    SearchForLlmAction,
+    ToolIntentRouter,
+    ToolPolicy,
+    ToolRuntime,
+    clean_search_snippet,
+    normalize_summary_length,
+    summary_style_config,
+)
+from app.orchestrator.model_runtime import (
+    ModelRuntime,
+    build_fetch_summary_prompt,
+    build_search_summary_prompt,
+)
+from app.orchestrator.conversation_pipeline import run_legacy_conversation_stream
+from app.core.tool_router import ToolRouter
+from app.services.session_service import SessionService
+from app.services.persona_service import PersonaService
+from app.services.preset_service import PresetService
+from app.tools import build_default_registry
+
+tool_registry = build_default_registry()
+tool_router = ToolRouter(tool_registry)
+tool_policy = ToolPolicy()
+tool_intent_router = ToolIntentRouter()
+tool_runtime = ToolRuntime(tool_registry, tool_policy)
+auto_tool_planner = AutoToolPlanner(tool_intent_router, tool_runtime)
+model_runtime = ModelRuntime(timeout_seconds=60)
+session_service = SessionService()
+preset_service = PresetService()
+persona_service = PersonaService()
+
+_STOPWORDS = {
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "to",
+    "of",
+    "for",
+    "in",
+    "on",
+    "with",
+    "is",
+    "are",
+    "be",
+    "this",
+    "that",
+    "please",
+    "what",
+    "how",
+    "why",
+    "when",
+    "where",
+}
+
+
 # --- Re-exports from extracted UI callback modules ---
 from app.ui.session_callbacks import (  # noqa: E402
     SessionUIState,
@@ -122,6 +252,7 @@ from app.ui.prompt_callbacks import (  # noqa: E402
 from app.ui.export_callbacks import export_current_chat_markdown  # noqa: E402
 
 # --- Chat core (streaming, tools, model calls) ---
+
 
 def _persist_user_message(session_id: str, user_text: str) -> None:
     if user_text.strip():
