@@ -658,14 +658,13 @@ def build_demo() -> gr.Blocks:
     current_model = models[0] if models else None
     if current_model and current_model not in models:
         models = [*models, current_model]
+    session_preferences = get_current_session_preferences()
     current_preset_id = (
-        str(ui_settings.get("last_selected_preset_id") or "").strip()
-        or session_preferences["preset_id"]
+        str(session_preferences.get("preset_id") or "").strip()
         or current_preset_id
     )
     current_persona_id = (
-        str(ui_settings.get("last_selected_persona_id") or "").strip()
-        or session_preferences["persona_id"]
+        str(session_preferences.get("persona_id") or "").strip()
         or current_persona_id
     )
     current_preset_name = next((label for label, value in preset_choices if value == current_preset_id), "")
