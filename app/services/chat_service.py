@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import base64
 import json
 import logging
+from app.core.file_processor import process_uploaded_files
 import re
 import time
-from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -38,10 +37,9 @@ from app.orchestrator.model_runtime import (
 )
 from app.orchestrator.conversation_pipeline import run_legacy_conversation_stream
 from app.core.tool_router import ToolRouter
+from app.services.session_service import SessionService
 from app.services.persona_service import PersonaService
 from app.services.preset_service import PresetService
-from app.services.prompt_service import PromptService
-from app.services.session_service import SessionService
 from app.tools import build_default_registry
 
 tool_registry = build_default_registry()
@@ -54,9 +52,6 @@ model_runtime = ModelRuntime(timeout_seconds=60)
 session_service = SessionService()
 preset_service = PresetService()
 persona_service = PersonaService()
-prompt_service = PromptService()
-EXPORTS_DIR = Path(__file__).resolve().parents[2] / "exports"
-_SESSION_LABEL_LANGUAGE = "English"
 
 _STOPWORDS = {
     "the",
@@ -83,1002 +78,54 @@ _STOPWORDS = {
     "where",
 }
 
-
-def _get_or_create_current_session() -> dict[str, object]:
-    session = session_service.get_current_session()
-    if session is not None:
-        return session
-    return session_service.create_session()
-
-
-def _session_messages_to_history(session: dict[str, object] | None) -> list[dict[str, str]]:
-    if not session:
-        return []
-
-    raw_messages = session.get("messages", [])
-    if not isinstance(raw_messages, list):
-        return []
-
-    history: list[dict[str, str]] = []
-    for item in raw_messages:
-        if not isinstance(item, dict):
-            continue
-        role = str(item.get("role", "")).strip().lower()
-        if role not in {"user", "assistant", "system", "tool"}:
-            continue
-        history.append({"role": role, "content": str(item.get("content", ""))})
-    return history
-
-
-def load_current_chat_history() -> list[dict[str, str]]:
-    return _session_messages_to_history(_get_or_create_current_session())
-
-
-def create_new_chat_session() -> tuple[list[dict[str, str]], list[dict[str, str]], str]:
-    session_service.create_session()
-    return [], [], "Started a new chat."
-
-
-def set_session_label_language(language: str | None) -> None:
-    global _SESSION_LABEL_LANGUAGE
-    normalized = str(language or "").strip()
-    _SESSION_LABEL_LANGUAGE = normalized or "English"
-
-
-def _localized_new_chat_title(title: str) -> str:
-    normalized = title.strip() or "New Chat"
-    if normalized != "New Chat":
-        return normalized
-
-    if _SESSION_LABEL_LANGUAGE == "Chinese":
-        return "新增對話"
-    if _SESSION_LABEL_LANGUAGE == "Thailand":
-        return "แชตใหม่"
-    return "New Chat"
-
-
-def _build_session_choice_label(session: dict[str, object]) -> str:
-    title = _localized_new_chat_title(str(session.get("title", "New Chat")))
-    if len(title) > 30:
-        title = title[:27].rstrip() + "..."
-    updated_at = _format_session_time(str(session.get("updated_at", "")).strip())
-    return f"{title} | {updated_at}" if updated_at else title
-
-
-def _format_session_time(value: str) -> str:
-    if not value:
-        return ""
-    try:
-        dt = datetime.fromisoformat(value)
-        if _SESSION_LABEL_LANGUAGE == "Chinese":
-            return f"{dt.month}月{dt.day}日 {dt.strftime('%H:%M')}"
-        if _SESSION_LABEL_LANGUAGE == "Thailand":
-            thai_months = [
-                "",
-                "ม.ค.",
-                "ก.พ.",
-                "มี.ค.",
-                "เม.ย.",
-                "พ.ค.",
-                "มิ.ย.",
-                "ก.ค.",
-                "ส.ค.",
-                "ก.ย.",
-                "ต.ค.",
-                "พ.ย.",
-                "ธ.ค.",
-            ]
-            return f"{dt.day} {thai_months[dt.month]} {dt.strftime('%H:%M')}"
-        return dt.strftime("%b %d %H:%M")
-    except ValueError:
-        return value[:16]
-
-
-def list_chat_session_choices() -> tuple[list[tuple[str, str]], str | None]:
-    sessions = session_service.list_sessions()
-    choices = [(_build_session_choice_label(session), str(session["id"])) for session in sessions]
-    return choices, session_service.get_current_session_id()
-
-
-def _session_dataset_update() -> tuple[dict, str | None]:
-    choices, current_id = list_chat_session_choices()
-    labels = [label for label, _value in choices]
-    samples = [[value] for _label, value in choices]
-    return gr.update(samples=samples, sample_labels=labels), current_id
-
-
-def _session_id_from_dataset_index(index: int | tuple[int, ...] | None) -> str | None:
-    choices, _current_id = list_chat_session_choices()
-    if isinstance(index, tuple):
-        if not index:
-            return None
-        index = index[0]
-    if not isinstance(index, int):
-        return None
-    if index < 0 or index >= len(choices):
-        return None
-    return choices[index][1]
-
-
-def switch_chat_session(session_id: str | None) -> tuple[list[dict[str, str]], list[dict[str, str]], str]:
-    if not session_id:
-        history = load_current_chat_history()
-        return history, history, "No session selected."
-
-    session = session_service.set_current_session(session_id)
-    if session is None:
-        history = load_current_chat_history()
-        return history, history, "Session not found."
-
-    history = _session_messages_to_history(session)
-    return history, history, "Switched chat session."
-
-
-def switch_chat_session_with_state(
-    session_id: str | None,
-) -> tuple[
-    list[dict[str, str]],
-    list[dict[str, str]],
-    dict,
-    str,
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    status = "Switched chat session."
-    if not session_id:
-        session = _get_or_create_current_session()
-        status = "No session selected."
-    else:
-        session = session_service.set_current_session(session_id)
-        if session is None:
-            session = _get_or_create_current_session()
-            status = "Session not found."
-
-    state = _resolve_session_ui_state(session)
-    history = state["history"]
-    return (
-        history,
-        history,
-        state["preset_dropdown"],
-        state["preset_name"],
-        state["persona_dropdown"],
-        state["persona_name"],
-        state["persona_description"],
-        state["persona_system_prompt"],
-        state["persona_default_model"],
-        state["persona_default_preset"],
-        state["model"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        status,
-    )
-
-
-def switch_chat_session_from_dataset(
-    evt: gr.SelectData,
-) -> tuple[
-    str | None,
-    list[dict[str, str]],
-    list[dict[str, str]],
-    dict,
-    str,
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    session_id = _session_id_from_dataset_index(getattr(evt, "index", None))
-    result = switch_chat_session_with_state(session_id)
-    return (session_id, *result)
-
-
-def create_new_chat_session_with_choices() -> tuple[dict, list[dict[str, str]], list[dict[str, str]], str]:
-    create_new_chat_session()
-    choices, current_id = list_chat_session_choices()
-    return gr.update(choices=choices, value=current_id), [], [], "Started a new chat."
-
-
-def create_new_chat_session_with_state() -> tuple[
-    dict,
-    list[dict[str, str]],
-    list[dict[str, str]],
-    dict,
-    str,
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    session = session_service.create_session()
-    session_choices, current_session_id = list_chat_session_choices()
-    state = _resolve_session_ui_state(session)
-    history = state["history"]
-    return (
-        gr.update(choices=session_choices, value=current_session_id),
-        history,
-        history,
-        state["preset_dropdown"],
-        state["preset_name"],
-        state["persona_dropdown"],
-        state["persona_name"],
-        state["persona_description"],
-        state["persona_system_prompt"],
-        state["persona_default_model"],
-        state["persona_default_preset"],
-        state["model"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        "Started a new chat.",
-    )
-
-
-def create_new_chat_session_with_dataset_state() -> tuple[
-    dict,
-    str | None,
-    list[dict[str, str]],
-    list[dict[str, str]],
-    dict,
-    str,
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    session = session_service.create_session()
-    dataset_update, current_session_id = _session_dataset_update()
-    state = _resolve_session_ui_state(session)
-    history = state["history"]
-    return (
-        dataset_update,
-        current_session_id,
-        history,
-        history,
-        state["preset_dropdown"],
-        state["preset_name"],
-        state["persona_dropdown"],
-        state["persona_name"],
-        state["persona_description"],
-        state["persona_system_prompt"],
-        state["persona_default_model"],
-        state["persona_default_preset"],
-        state["model"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        "Started a new chat.",
-    )
-
-
-def rename_chat_session(session_id: str | None, title: str) -> tuple[dict, str]:
-    if not session_id:
-        choices, current_id = list_chat_session_choices()
-        return gr.update(choices=choices, value=current_id), "No session selected."
-
-    try:
-        renamed = session_service.rename_session(session_id, title)
-    except ValueError as exc:
-        choices, current_id = list_chat_session_choices()
-        return gr.update(choices=choices, value=current_id), str(exc)
-
-    choices, current_id = list_chat_session_choices()
-    if renamed is None:
-        return gr.update(choices=choices, value=current_id), "Session not found."
-    return gr.update(choices=choices, value=current_id), "Chat renamed."
-
-
-def rename_chat_session_from_state(session_id: str | None, title: str) -> tuple[dict, str | None, str]:
-    if not session_id:
-        dataset_update, current_id = _session_dataset_update()
-        return dataset_update, current_id, "No session selected."
-
-    try:
-        renamed = session_service.rename_session(session_id, title)
-    except ValueError as exc:
-        dataset_update, current_id = _session_dataset_update()
-        return dataset_update, current_id, str(exc)
-
-    dataset_update, current_id = _session_dataset_update()
-    if renamed is None:
-        return dataset_update, current_id, "Session not found."
-    return dataset_update, current_id, "Chat renamed."
-
-
-def delete_chat_session(session_id: str | None) -> tuple[dict, list[dict[str, str]], list[dict[str, str]], str]:
-    if not session_id:
-        choices, current_id = list_chat_session_choices()
-        history = load_current_chat_history()
-        return gr.update(choices=choices, value=current_id), history, history, "No session selected."
-
-    deleted = session_service.delete_session(session_id)
-    choices, current_id = list_chat_session_choices()
-    history = load_current_chat_history()
-    if not deleted:
-        return gr.update(choices=choices, value=current_id), history, history, "Session not found."
-    return gr.update(choices=choices, value=current_id), history, history, "Chat deleted."
-
-
-def delete_chat_session_with_state(
-    session_id: str | None,
-) -> tuple[
-    dict,
-    list[dict[str, str]],
-    list[dict[str, str]],
-    dict,
-    str,
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    deleted = False
-    if session_id:
-        deleted = session_service.delete_session(session_id)
-
-    session_choices, current_session_id = list_chat_session_choices()
-    session = _get_or_create_current_session()
-    state = _resolve_session_ui_state(session)
-    history = state["history"]
-    status = "Chat deleted." if deleted else "Session not found." if session_id else "No session selected."
-    return (
-        gr.update(choices=session_choices, value=current_session_id),
-        history,
-        history,
-        state["preset_dropdown"],
-        state["preset_name"],
-        state["persona_dropdown"],
-        state["persona_name"],
-        state["persona_description"],
-        state["persona_system_prompt"],
-        state["persona_default_model"],
-        state["persona_default_preset"],
-        state["model"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        status,
-    )
-
-
-def delete_chat_session_with_dataset_state(
-    session_id: str | None,
-) -> tuple[
-    dict,
-    str | None,
-    list[dict[str, str]],
-    list[dict[str, str]],
-    dict,
-    str,
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    deleted = False
-    if session_id:
-        deleted = session_service.delete_session(session_id)
-
-    dataset_update, current_session_id = _session_dataset_update()
-    session = _get_or_create_current_session()
-    state = _resolve_session_ui_state(session)
-    history = state["history"]
-    status = "Chat deleted." if deleted else "Session not found." if session_id else "No session selected."
-    return (
-        dataset_update,
-        current_session_id,
-        history,
-        history,
-        state["preset_dropdown"],
-        state["preset_name"],
-        state["persona_dropdown"],
-        state["persona_name"],
-        state["persona_description"],
-        state["persona_system_prompt"],
-        state["persona_default_model"],
-        state["persona_default_preset"],
-        state["model"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        state["llm_temperature"],
-        state["llm_max_tokens"],
-        state["llm_top_p"],
-        state["llm_typical_p"],
-        state["llm_num_ctx"],
-        status,
-    )
-
-
-def list_preset_choices() -> tuple[list[tuple[str, str]], str | None]:
-    presets = preset_service.list_presets()
-    choices = [(str(item.get("name", "Preset")), str(item["id"])) for item in presets]
-    current = _get_or_create_current_session()
-    current_preset_id = current.get("preset_id")
-    if current_preset_id and any(value == current_preset_id for _label, value in choices):
-        return choices, str(current_preset_id)
-    return choices, None
-
-
-def list_persona_choices() -> tuple[list[tuple[str, str]], str | None]:
-    personas = persona_service.list_personas()
-    choices = [(str(item.get("name", "Persona")), str(item["id"])) for item in personas]
-    current = _get_or_create_current_session()
-    current_persona_id = current.get("persona_id")
-    if current_persona_id and any(value == current_persona_id for _label, value in choices):
-        return choices, str(current_persona_id)
-    return choices, None
-
-
-def _resolve_session_ui_state(session: dict[str, object] | None) -> dict[str, object]:
-    current = session or _get_or_create_current_session()
-    preset_choices, _ = list_preset_choices()
-    persona_choices, _ = list_persona_choices()
-
-    persona_id = str(current.get("persona_id") or "") or None
-    preset_id = str(current.get("preset_id") or "") or None
-    model_value = str(current.get("model") or "") or None
-
-    persona = persona_service.get_persona(persona_id) if persona_id else None
-    preset = preset_service.get_preset(preset_id) if preset_id else None
-
-    return {
-        "history": _session_messages_to_history(current),
-        "preset_dropdown": gr.update(choices=preset_choices, value=preset_id),
-        "preset_name": str(preset.get("name", "")) if preset else "",
-        "persona_dropdown": gr.update(choices=persona_choices, value=persona_id),
-        "persona_name": str(persona.get("name", "")) if persona else "",
-        "persona_description": str(persona.get("description", "")) if persona else "",
-        "persona_system_prompt": str(persona.get("system_prompt", "")) if persona else "",
-        "persona_default_model": (str(persona.get("default_model", "")) or None) if persona else None,
-        "persona_default_preset": (str(persona.get("default_preset", "")) or None) if persona else None,
-        "model": model_value,
-        "llm_temperature": preset["llm_temperature"] if preset else gr.update(),
-        "llm_max_tokens": preset["llm_max_tokens"] if preset else gr.update(),
-        "llm_top_p": preset["llm_top_p"] if preset else gr.update(),
-        "llm_typical_p": preset["llm_typical_p"] if preset else gr.update(),
-        "llm_num_ctx": preset["llm_num_ctx"] if preset else gr.update(),
-    }
-
-
-def apply_preset_to_current_session(
-    preset_id: str | None,
-) -> tuple[dict, str, float | int | None, float | int | None, float | int | None, float | int | None, float | int | None, float | int | None, float | int | None, float | int | None, float | int | None, float | int | None, str]:
-    choices, current_value = list_preset_choices()
-    if not preset_id:
-        session = _get_or_create_current_session()
-        session_service.update_session(str(session["id"]), {"preset_id": None})
-        return (
-            gr.update(choices=choices, value=None),
-            "",
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            "Preset cleared for current chat.",
-        )
-
-    preset = preset_service.get_preset(preset_id)
-    if preset is None:
-        return (
-            gr.update(choices=choices, value=current_value),
-            "",
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            "Preset not found.",
-        )
-
-    session = _get_or_create_current_session()
-    session_service.update_session(str(session["id"]), {"preset_id": preset_id})
-    return (
-        gr.update(choices=choices, value=preset_id),
-        str(preset.get("name", "")),
-        preset["llm_temperature"],
-        preset["llm_max_tokens"],
-        preset["llm_top_p"],
-        preset["llm_typical_p"],
-        preset["llm_num_ctx"],
-        preset["llm_temperature"],
-        preset["llm_max_tokens"],
-        preset["llm_top_p"],
-        preset["llm_typical_p"],
-        preset["llm_num_ctx"],
-        f"Applied preset: {preset['name']}",
-    )
-
-
-def save_preset_from_values(
-    preset_id: str | None,
-    name: str,
-    temperature: float,
-    max_tokens: float,
-    top_p: float,
-    typical_p: float,
-    num_ctx: float,
-) -> tuple[dict, dict, str]:
-    payload = {
-        "name": name.strip() or "Custom Preset",
-        "llm_temperature": float(temperature),
-        "llm_max_tokens": int(max_tokens),
-        "llm_top_p": float(top_p),
-        "llm_typical_p": float(typical_p),
-        "llm_num_ctx": int(num_ctx),
-    }
-
-    target = preset_service.get_preset(preset_id) if preset_id else None
-    if target and not target.get("builtin"):
-        saved = preset_service.update_preset(
-            preset_id,
-            {
-                "name": payload["name"],
-                "llm_temperature": payload["llm_temperature"],
-                "llm_max_tokens": payload["llm_max_tokens"],
-                "llm_top_p": payload["llm_top_p"],
-                "llm_typical_p": payload["llm_typical_p"],
-                "llm_num_ctx": payload["llm_num_ctx"],
-            },
-        )
-        status = "Preset updated." if saved else "Preset not found."
-        selected = preset_id
-    else:
-        saved = preset_service.create_preset(payload["name"], payload)
-        status = "Preset created."
-        selected = str(saved["id"])
-
-    session = _get_or_create_current_session()
-    session_service.update_session(str(session["id"]), {"preset_id": selected})
-    choices, _current = list_preset_choices()
-    update = gr.update(choices=choices, value=selected)
-    return update, update, status
-
-
-def delete_selected_preset(preset_id: str | None) -> tuple[dict, dict, str]:
-    if not preset_id:
-        choices, current = list_preset_choices()
-        update = gr.update(choices=choices, value=current)
-        return update, update, "No preset selected."
-
-    deleted = preset_service.delete_preset(preset_id)
-    session = _get_or_create_current_session()
-    current_updates: dict[str, object] = {}
-    if session.get("preset_id") == preset_id:
-        current_updates["preset_id"] = None
-    if current_updates:
-        session_service.update_session(str(session["id"]), current_updates)
-    choices, current = list_preset_choices()
-    if not deleted:
-        update = gr.update(choices=choices, value=current)
-        return update, update, "Builtin presets cannot be deleted."
-    update = gr.update(choices=choices, value=current)
-    return update, update, "Preset deleted."
-
-
-def load_selected_persona(
-    persona_id: str | None,
-) -> tuple[
-    dict,
-    str,
-    str,
-    str,
-    str | None,
-    str | None,
-    dict,
-    str | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    float | int | None,
-    str,
-]:
-    choices, current = list_persona_choices()
-    if not persona_id:
-        session = _get_or_create_current_session()
-        session_service.update_session(str(session["id"]), {"persona_id": None})
-        return (
-            gr.update(choices=choices, value=None),
-            "",
-            "",
-            "",
-            None,
-            None,
-            gr.update(),
-            None,
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            "Persona cleared for current chat.",
-        )
-
-    persona = persona_service.get_persona(persona_id)
-    if persona is None:
-        return (
-            gr.update(choices=choices, value=current),
-            "",
-            "",
-            "",
-            None,
-            None,
-            gr.update(),
-            None,
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            gr.update(),
-            "Persona not found.",
-        )
-
-    session = _get_or_create_current_session()
-    updates: dict[str, object] = {"persona_id": persona_id}
-    preset_id = str(persona.get("default_preset") or "") or None
-    model_value = str(persona.get("default_model") or "") or None
-    preset = preset_service.get_preset(preset_id) if preset_id else None
-    if preset_id:
-        updates["preset_id"] = preset_id
-    if model_value:
-        updates["model"] = model_value
-    session_service.update_session(str(session["id"]), updates)
-    return (
-        gr.update(choices=choices, value=persona_id),
-        str(persona.get("name", "")),
-        str(persona.get("description", "")),
-        str(persona.get("system_prompt", "")),
-        model_value,
-        preset_id,
-        gr.update(value=preset_id),
-        model_value,
-        preset["llm_temperature"] if preset else gr.update(),
-        preset["llm_max_tokens"] if preset else gr.update(),
-        preset["llm_top_p"] if preset else gr.update(),
-        preset["llm_typical_p"] if preset else gr.update(),
-        preset["llm_num_ctx"] if preset else gr.update(),
-        preset["llm_temperature"] if preset else gr.update(),
-        preset["llm_max_tokens"] if preset else gr.update(),
-        preset["llm_top_p"] if preset else gr.update(),
-        preset["llm_typical_p"] if preset else gr.update(),
-        preset["llm_num_ctx"] if preset else gr.update(),
-        f"Applied persona: {persona.get('name', 'Persona')}",
-    )
-
-
-def save_persona(
-    persona_id: str | None,
-    name: str,
-    description: str,
-    system_prompt: str,
-    default_model: str | None,
-    default_preset: str | None,
-) -> tuple[dict, str]:
-    if persona_id:
-        saved = persona_service.update_persona(
-            persona_id,
-            {
-                "name": name.strip() or "New Persona",
-                "description": description.strip(),
-                "system_prompt": system_prompt,
-                "default_model": default_model,
-                "default_preset": default_preset,
-            },
-        )
-        selected = persona_id if saved else None
-        status = "Persona updated." if saved else "Persona not found."
-    else:
-        saved = persona_service.create_persona(
-            name.strip() or "New Persona",
-            system_prompt,
-            description=description,
-            default_model=default_model,
-            default_preset=default_preset,
-        )
-        selected = str(saved["id"])
-        status = "Persona created."
-
-    session = _get_or_create_current_session()
-    if selected:
-        session_service.update_session(str(session["id"]), {"persona_id": selected})
-    choices, _current = list_persona_choices()
-    return gr.update(choices=choices, value=selected), status
-
-
-def delete_selected_persona(persona_id: str | None) -> tuple[dict, str, str, str, str | None, str | None, str]:
-    if not persona_id:
-        choices, current = list_persona_choices()
-        return gr.update(choices=choices, value=current), "", "", "", None, None, "No persona selected."
-
-    deleted = persona_service.delete_persona(persona_id)
-    session = _get_or_create_current_session()
-    if session.get("persona_id") == persona_id:
-        session_service.update_session(str(session["id"]), {"persona_id": None})
-    choices, current = list_persona_choices()
-    if not deleted:
-        return gr.update(choices=choices, value=current), "", "", "", None, None, "Persona not found."
-    return gr.update(choices=choices, value=current), "", "", "", None, None, "Persona deleted."
-
-
-def list_prompt_choices() -> tuple[list[tuple[str, str]], str | None]:
-    prompts = prompt_service.list_prompts()
-    choices = [
-        (f"{item['name']} [{item['category']}]" + (" *" if item.get("favorite") else ""), str(item["id"]))
-        for item in prompts
-    ]
-    return choices, choices[0][1] if choices else None
-
-
-def load_selected_prompt(prompt_id: str | None) -> tuple[dict, str, str, str, bool, str]:
-    choices, current = list_prompt_choices()
-    if not prompt_id:
-        return gr.update(choices=choices, value=current), "", "", "", False, "No prompt selected."
-
-    prompt = prompt_service.get_prompt(prompt_id)
-    if prompt is None:
-        return gr.update(choices=choices, value=current), "", "", "", False, "Prompt not found."
-
-    return (
-        gr.update(choices=choices, value=prompt_id),
-        str(prompt.get("name", "")),
-        str(prompt.get("category", "")),
-        str(prompt.get("content", "")),
-        bool(prompt.get("favorite", False)),
-        "Prompt loaded.",
-    )
-
-
-def save_prompt_entry(
-    prompt_id: str | None,
-    name: str,
-    category: str,
-    content: str,
-    favorite: bool,
-) -> tuple[dict, str]:
-    if prompt_id:
-        saved = prompt_service.update_prompt(
-            prompt_id,
-            {
-                "name": name.strip() or "Untitled Prompt",
-                "category": category.strip() or "general",
-                "content": content,
-                "favorite": bool(favorite),
-            },
-        )
-        selected = prompt_id if saved else None
-        status = "Prompt updated." if saved else "Prompt not found."
-    else:
-        saved = prompt_service.create_prompt(
-            name.strip() or "Untitled Prompt",
-            content,
-            category=category.strip() or "general",
-            favorite=bool(favorite),
-        )
-        selected = str(saved["id"])
-        status = "Prompt created."
-
-    choices, _current = list_prompt_choices()
-    return gr.update(choices=choices, value=selected), status
-
-
-def delete_selected_prompt(prompt_id: str | None) -> tuple[dict, str, str, str, bool, str]:
-    if not prompt_id:
-        choices, current = list_prompt_choices()
-        return gr.update(choices=choices, value=current), "", "", "", False, "No prompt selected."
-
-    deleted = prompt_service.delete_prompt(prompt_id)
-    choices, current = list_prompt_choices()
-    if not deleted:
-        return gr.update(choices=choices, value=current), "", "", "", False, "Prompt not found."
-    return gr.update(choices=choices, value=current), "", "", "", False, "Prompt deleted."
-
-
-def insert_selected_prompt_into_workspace(prompt_id: str | None, current_text: str) -> tuple[str, str]:
-    if not prompt_id:
-        return current_text, "No prompt selected."
-
-    prompt = prompt_service.get_prompt(prompt_id)
-    if prompt is None:
-        return current_text, "Prompt not found."
-
-    content = str(prompt.get("content", ""))
-    if not current_text.strip():
-        return content, "Prompt inserted."
-    return current_text.rstrip() + "\n\n" + content, "Prompt inserted."
-
-
-def _slugify_filename(value: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
-    cleaned = cleaned.strip("-._")
-    return cleaned or "chat"
-
-
-def export_current_chat_markdown() -> tuple[str, str]:
-    session = _get_or_create_current_session()
-    messages = session.get("messages", [])
-    if not isinstance(messages, list) or not messages:
-        return "", "Current chat is empty."
-
-    EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    title = str(session.get("title", "chat")).strip() or "chat"
-    timestamp = str(session.get("updated_at", "")).replace(":", "-")
-    filename = f"{_slugify_filename(title)}-{_slugify_filename(timestamp)}.md"
-    path = EXPORTS_DIR / filename
-
-    lines = [f"# {title}", ""]
-    if session.get("created_at"):
-        lines.append(f"- Created: {session['created_at']}")
-    if session.get("updated_at"):
-        lines.append(f"- Updated: {session['updated_at']}")
-    if session.get("model"):
-        lines.append(f"- Model: {session['model']}")
-    if session.get("server"):
-        lines.append(f"- Server: {session['server']}")
-    lines.append("")
-
-    for message in messages:
-        if not isinstance(message, dict):
-            continue
-        role = str(message.get("role", "assistant")).strip().capitalize()
-        content = str(message.get("content", "")).rstrip()
-        created_at = str(message.get("created_at", "")).strip()
-        lines.append(f"## {role}")
-        if created_at:
-            lines.append(f"_Time: {created_at}_")
-            lines.append("")
-        lines.append(content)
-        lines.append("")
-
-    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return str(path), f"Exported chat to {path.name}"
+# --- Re-exports from extracted UI callback modules ---
+from app.ui.session_callbacks import (  # noqa: E402
+    SessionUIState,
+    _get_or_create_current_session,
+    _session_messages_to_history,
+    create_new_chat_session,
+    create_new_chat_session_with_choices,
+    create_new_chat_session_with_state,
+    create_new_chat_session_with_dataset_state,
+    delete_chat_session,
+    delete_chat_session_with_state,
+    delete_chat_session_with_dataset_state,
+    list_chat_session_choices,
+    load_current_chat_history,
+    rename_chat_session,
+    rename_chat_session_from_state,
+    set_session_label_language,
+    switch_chat_session,
+    switch_chat_session_with_state,
+    switch_chat_session_from_dataset,
+)
+from app.ui.preset_callbacks import (  # noqa: E402
+    PresetUIState,
+    apply_preset_to_current_session,
+    delete_selected_preset,
+    list_preset_choices,
+    save_preset_from_values,
+)
+from app.ui.persona_callbacks import (  # noqa: E402
+    delete_selected_persona,
+    list_persona_choices,
+    load_selected_persona,
+    save_persona,
+)
+from app.ui.prompt_callbacks import (  # noqa: E402
+    delete_selected_prompt,
+    insert_selected_prompt_into_workspace,
+    list_prompt_choices,
+    load_selected_prompt,
+    save_prompt_entry,
+)
+from app.ui.export_callbacks import export_current_chat_markdown  # noqa: E402
+
+# --- Chat core (streaming, tools, model calls) ---
 
 def _persist_user_message(session_id: str, user_text: str) -> None:
     if user_text.strip():
         session_service.append_message(session_id, "user", user_text)
-
 
 def _persist_assistant_message(session_id: str, content: str) -> None:
     normalized = content.strip()
@@ -1105,7 +152,6 @@ def _extract_search_keywords(text: str) -> str:
 
     return " ".join(keywords) if keywords else text.strip()
 
-
 def _build_tool_instruction() -> str:
     lines = ["Available tools:"]
     for tool in tool_registry.list_tools():
@@ -1114,7 +160,6 @@ def _build_tool_instruction() -> str:
     lines.append('<tool_call>{"name":"tool_name","arguments":{}}</tool_call>')
     lines.append("Do not include extra text when emitting a tool call.")
     return "\n".join(lines)
-
 
 def _linkify_reference_markers(text: str, refs: list[dict[str, str]]) -> str:
     if not text or not refs:
@@ -1130,7 +175,6 @@ def _linkify_reference_markers(text: str, refs: list[dict[str, str]]) -> str:
         return f"[{idx + 1}]({url})"
 
     return re.sub(r"\[(\d+)\]", repl, text)
-
 
 def _append_source_links(text: str, refs: list[dict[str, str]]) -> str:
     if not text or not refs:
@@ -1151,7 +195,6 @@ def _append_source_links(text: str, refs: list[dict[str, str]]) -> str:
         return text
 
     return text + "\n\nWeb Sources:\n" + "\n".join(source_lines)
-
 
 def _build_web_context(
     question_text: str,
@@ -1207,7 +250,6 @@ def _build_web_context(
 
     return "\n".join(lines), None, refs
 
-
 def _try_execute_tool_command(text: str | None, search_provider: str | None = None) -> str | None:
     ensure_not_stopped()
     if not text:
@@ -1254,7 +296,6 @@ def _try_execute_tool_command(text: str | None, search_provider: str | None = No
 
     return f"Tool '{tool_name}' result:\n{json.dumps(result.get('result', {}), ensure_ascii=False, indent=2)}"
 
-
 def _try_auto_tool_intent(
     text: str | None,
     search_provider: str | None,
@@ -1268,7 +309,6 @@ def _try_auto_tool_intent(
         search_summary_length=search_summary_length,
     )
 
-
 def _build_history_prompt(history: list[dict[str, str]], user_text: str, system_prompt: str | None = None) -> str:
     prompt = ""
     if system_prompt and system_prompt.strip():
@@ -1278,7 +318,6 @@ def _build_history_prompt(history: list[dict[str, str]], user_text: str, system_
         prompt += f"{msg['role'].capitalize()}: {msg['content']}\n"
     prompt += f"\nUser: {user_text}\n"
     return prompt
-
 
 def _build_ollama_options(
     llm_temperature,
@@ -1315,7 +354,6 @@ def _build_ollama_options(
         pass
     return options
 
-
 def _build_chat_url(selected_server: str) -> str:
     raw = (selected_server or "").strip()
     if not raw:
@@ -1332,10 +370,8 @@ def _build_chat_url(selected_server: str) -> str:
     port = parsed.port if parsed.port else 11434
     return f"{address}:{port}/api/chat"
 
-
 def _post_chat_once(url: str, headers: dict[str, str], payload: dict) -> str:
     return model_runtime.post_chat_once(url, headers, payload)
-
 
 def _build_fallback_payloads(
     model: str,
@@ -1399,10 +435,8 @@ def _build_fallback_payloads(
 
     return payloads
 
-
 def _stream_chat(url: str, headers: dict[str, str], payload: dict):
     yield from model_runtime.stream_chat(url, headers, payload)
-
 
 def ask_question_stream(
     question,
@@ -1423,7 +457,7 @@ def ask_question_stream(
     ensure_not_stopped()
 
     current_session = _get_or_create_current_session()
-    session_id = str(current_session["id"])
+    session_id = str(current_session.get("id", ""))
     history = _session_messages_to_history(current_session)
     effective_model = model
     system_prompt = ""
@@ -1468,6 +502,11 @@ def ask_question_stream(
 
     user_text = question.get("text") or ""
     web_refs: list[dict[str, str]] = []
+
+    file_result = process_uploaded_files(question.get("files", []))
+    image_payload = {"images": file_result.images} if file_result.images else {}
+    if file_result.combined_text:
+        user_text = file_result.combined_text + "\n\n" + user_text
 
     new_messages = history.copy()
     new_messages.append({"role": "user", "content": user_text})
@@ -1683,17 +722,6 @@ def ask_question_stream(
             _persist_assistant_message(session_id, assistant_message["content"])
             return
 
-        if len(question.get("files", [])) > 0:
-            file_path = question["files"][0]
-            try:
-                with open(file_path, "rb") as img_file:
-                    encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
-                    image_payload = {"images": [encoded_image]}
-            except Exception as exc:  # noqa: BLE001
-                logging.error("Image encode failed: %s", exc)
-                image_payload = {}
-        else:
-            image_payload = {}
         for message, status in run_legacy_conversation_stream(
             question=question,
             history=history,
@@ -1741,13 +769,10 @@ def ask_question_stream(
         _persist_assistant_message(session_id, assistant_message["content"])
         yield new_messages[-1], f"Error: {exc}"
 
-
 def stop_response():
     request_stop()
     return gr.update(interactive=True), "Stopping..."
 
-
 def send_prompt(prompt):
     return prompt
-
 

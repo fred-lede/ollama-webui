@@ -27,5 +27,6 @@ data/
 exports/
 Microsoft/
 
-# Local app settings
+# Local settings (contains API keys and host config)
 app_settings.json
+server_settings.json

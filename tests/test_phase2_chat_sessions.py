@@ -11,6 +11,7 @@ from app.services.persona_service import PersonaService
 from app.services.preset_service import PresetService
 from app.services.prompt_service import PromptService
 from app.services.session_service import SessionService
+from app.ui import export_callbacks, persona_callbacks, preset_callbacks, prompt_callbacks, session_callbacks
 
 
 class ChatSessionPersistenceTests(unittest.TestCase):
@@ -22,10 +23,15 @@ class ChatSessionPersistenceTests(unittest.TestCase):
         self.persona_service = PersonaService(self.store)
         self.prompt_service = PromptService(self.store)
         self.patches = [
+            # Core chat flow (ask_question_stream) reads chat_service.* singletons
             patch.object(chat_service, "session_service", self.session_service),
             patch.object(chat_service, "preset_service", self.preset_service),
             patch.object(chat_service, "persona_service", self.persona_service),
-            patch.object(chat_service, "prompt_service", self.prompt_service),
+            # Re-exported callbacks read their own module's singletons
+            patch.object(session_callbacks, "session_service", self.session_service),
+            patch.object(preset_callbacks, "preset_service", self.preset_service),
+            patch.object(persona_callbacks, "persona_service", self.persona_service),
+            patch.object(prompt_callbacks, "prompt_service", self.prompt_service),
         ]
         for item in self.patches:
             item.start()
@@ -164,18 +170,18 @@ class ChatSessionPersistenceTests(unittest.TestCase):
         )
         self.session_service.append_message(session["id"], "assistant", "saved")
 
-        result = chat_service.switch_chat_session_with_state(session["id"])
+        state, status = chat_service.switch_chat_session_with_state(session["id"])
 
-        self.assertEqual(result[0][0]["content"], "saved")
-        self.assertEqual(result[3], "Session Preset")
-        self.assertEqual(result[5], "Researcher")
-        self.assertEqual(result[6], "Focus on sources")
-        self.assertEqual(result[7], "You are a research assistant.")
-        self.assertEqual(result[8], "research-model")
-        self.assertEqual(result[9], preset["id"])
-        self.assertEqual(result[10], "research-model")
-        self.assertEqual(result[11], 0.3)
-        self.assertEqual(result[-1], "Switched chat session.")
+        self.assertEqual(state.history[0]["content"], "saved")
+        self.assertEqual(state.preset_name, "Session Preset")
+        self.assertEqual(state.persona_name, "Researcher")
+        self.assertEqual(state.persona_description, "Focus on sources")
+        self.assertEqual(state.persona_system_prompt, "You are a research assistant.")
+        self.assertEqual(state.persona_default_model, "research-model")
+        self.assertEqual(state.persona_default_preset, preset["id"])
+        self.assertEqual(state.model, "research-model")
+        self.assertEqual(state.llm_temperature, 0.3)
+        self.assertEqual(status, "Switched chat session.")
 
     def test_prompt_library_helpers_cover_crud_and_insert(self):
         dropdown_update, status = chat_service.save_prompt_entry(
@@ -217,7 +223,7 @@ class ChatSessionPersistenceTests(unittest.TestCase):
         self.session_service.append_message(session["id"], "assistant", "world")
 
         export_dir = Path(self.tmpdir.name) / "exports"
-        with patch.object(chat_service, "EXPORTS_DIR", export_dir):
+        with patch.object(export_callbacks, "EXPORTS_DIR", export_dir):
             export_path, status = chat_service.export_current_chat_markdown()
 
         self.assertTrue(export_path.endswith(".md"))
@@ -242,10 +248,10 @@ class ChatSessionPersistenceTests(unittest.TestCase):
         )
         self.session_service.create_session("Preset Chat")
 
-        result = chat_service.apply_preset_to_current_session(custom["id"])
-        self.assertEqual(result[-1], "Applied preset: Low Temp")
-        self.assertEqual(result[1], "Low Temp")
-        self.assertEqual(result[2], 0.1)
+        state, status = chat_service.apply_preset_to_current_session(custom["id"])
+        self.assertEqual(status, "Applied preset: Low Temp")
+        self.assertEqual(state.preset_name, "Low Temp")
+        self.assertEqual(state.llm_temperature, 0.1)
         current = self.session_service.get_current_session()
         self.assertEqual(current["preset_id"], custom["id"])
 

@@ -2,10 +2,10 @@ from app.orchestrator.auto_tool_planner import (
     AutoToolPlanner,
     clean_search_snippet,
     format_search_results_text,
-    normalize_summary_length,
     summary_style_config,
     summarize_fetched_content,
 )
+from app.core.normalizers import normalize_summary_length
 from app.orchestrator.context import ModelOptions, RequestContext, SearchSettings
 from app.orchestrator.intent_router import ToolIntentRouter
 from app.orchestrator.orchestrator import Orchestrator

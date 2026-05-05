@@ -77,23 +77,41 @@ def test_llm_connection(selected_server: str | None, selected_model: str | None)
 
     try:
         address, port = _normalize_server_base(str(selected_server))
+
+        # Step 1: lightweight server liveness check (no model needed)
+        try:
+            version_resp = requests.get(f"{address}:{port}/api/version", timeout=10)
+            version_resp.raise_for_status()
+            ollama_version = version_resp.json().get("version", "")
+        except requests.RequestException:
+            ollama_version = ""
+
+        # Step 2: model inference ping (may be slow on first load / remote host)
         url = f"{address}:{port}/api/chat"
         payload = {
             "model": str(selected_model),
-            "messages": [{"role": "user", "content": "ping"}],
+            "messages": [{"role": "user", "content": "hi"}],
             "stream": False,
-            "options": {"num_predict": 8, "temperature": 0},
+            "options": {"num_predict": 2, "temperature": 0},
         }
 
-        response = requests.post(url, json=payload, timeout=20)
-        response.raise_for_status()
-        data = response.json() if response.content else {}
-        has_message = isinstance(data, dict) and isinstance(data.get("message"), dict)
-        if not has_message:
-            logging.warning("LLM health check got unexpected shape: %s", data)
+        try:
+            response = requests.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+            data = response.json() if response.content else {}
+            has_message = isinstance(data, dict) and isinstance(data.get("message"), dict)
+            if not has_message:
+                logging.warning("LLM health check got unexpected shape: %s", data)
+        except requests.Timeout:
+            ver_note = f" (Ollama {ollama_version})" if ollama_version else ""
+            return (
+                f"伺服器存活{ver_note}，但模型 {selected_model} 回應逾時（可能正在載入）",
+                _status_light_html("warn", "回應慢"),
+            )
 
+        ver_note = f" — Ollama {ollama_version}" if ollama_version else ""
         return (
-            f"LLM 連線正常：{selected_model}",
+            f"LLM 連線正常：{selected_model}{ver_note}",
             _status_light_html("ok", "連線正常"),
         )
     except ValueError as exc:
@@ -138,7 +156,7 @@ def handle_add_server(
     hosts, _ = load_settings()
 
     for host in hosts:
-        if host["address"] == new_address and host["port"] == new_port:
+        if host.get("address") == new_address and host.get("port") == new_port:
             return "Server already exists.", gr.update(), gr.update(), "", ""
 
     hosts.append(
@@ -152,11 +170,11 @@ def handle_add_server(
 
     if new_default_server:
         for host in hosts:
-            host["default"] = host["address"] == new_address and host["port"] == new_port
+            host["default"] = host.get("address") == new_address and host.get("port") == new_port
 
     save_settings(hosts)
 
-    server_choices = [(host["server_name"], f"{host['address']}:{host['port']}") for host in hosts]
+    server_choices = [(host.get("server_name", "Server"), f"{host.get('address', '')}:{host.get('port', 11434)}") for host in hosts if host.get("address")]
     current_host = f"{new_address}:{new_port}"
     models = fetch_models(new_address, new_port)
 

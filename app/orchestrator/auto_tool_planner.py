@@ -4,6 +4,7 @@ import re
 from html import unescape
 from urllib.parse import urlparse
 
+from app.core.normalizers import normalize_summary_length
 from app.orchestrator.intent_router import ToolIntentRouter
 from app.orchestrator.tool_runtime import ToolRuntime
 from app.orchestrator.types import AutoToolAction, DirectAction, FetchForLlmAction, SearchForLlmAction
@@ -23,13 +24,6 @@ _TRUSTED_SEARCH_DOMAINS = (
     "wired.com",
     "zdnet.com",
 )
-
-
-def normalize_summary_length(value: str | None) -> str:
-    v = (value or "").strip().lower()
-    if v in {"short", "medium", "long"}:
-        return v
-    return "medium"
 
 
 def summary_style_config(summary_length: str) -> dict[str, int | str]:

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import gradio as gr
 
-from app.core.app_settings import load_app_settings, save_app_settings
-from app.core.config import load_language_settings, load_llm_parameters, load_settings, save_default_language, save_llm_parameters
+from app.core.config import load_language_settings, load_llm_parameters, load_search_settings, load_settings, save_default_language, save_llm_parameters, save_search_settings
+from app.core.normalizers import clamp_float, clamp_int, normalize_bool, normalize_provider, normalize_summary_length
 from app.services.chat_service import (
+    PresetUIState,
+    SessionUIState,
     apply_preset_to_current_session,
     ask_question_stream,
     create_new_chat_session_with_state,
@@ -461,8 +463,11 @@ UI_DEFAULT_TRANSLATIONS = {
 
 def _resolved_translations(language_settings: dict, selected_language: str) -> dict:
     merged = dict(UI_DEFAULT_TRANSLATIONS["English"])
-    english_translations = language_settings.get("languages", {}).get("English", {})
-    selected_translations = language_settings.get("languages", {}).get(selected_language, {})
+    languages_block = language_settings.get("languages", {})
+    if not isinstance(languages_block, dict):
+        languages_block = {}
+    english_translations = languages_block.get("English", {})
+    selected_translations = languages_block.get(selected_language, {})
     if isinstance(english_translations, dict):
         merged.update(english_translations)
     if isinstance(selected_translations, dict):
@@ -498,74 +503,34 @@ def export_chat_ui() -> str:
         return f"{status}: {export_path}"
     return status
 
-def _clamp_float(value: float | int | str, minimum: float, maximum: float, default: float) -> float:
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(parsed, maximum))
-
-
-def _clamp_int(value: float | int | str, minimum: int, maximum: int, default: int) -> int:
-    try:
-        parsed = int(float(value))
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(parsed, maximum))
-
-
-def _normalize_provider(value: str) -> str:
-    v = (value or "").strip().lower()
-    if v in {"serper", "serper.dev", "serper_dev"}:
-        return "serper.dev"
-    if v == "tavily":
-        return "tavily"
-    return "serper.dev"
-
-
-def _normalize_summary_length(value: str) -> str:
-    v = (value or "").strip().lower()
-    if v in {"short", "medium", "long"}:
-        return v
-    return "medium"
-
-
-def _normalize_bool(value: object, default: bool = False) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        v = value.strip().lower()
-        if v in {"true", "1", "yes", "on"}:
-            return True
-        if v in {"false", "0", "no", "off"}:
-            return False
-    return default
-
 def build_demo() -> gr.Blocks:
     language_settings = load_language_settings()
     current_language = language_settings.get("default_language", "English")
     translations = _resolved_translations(language_settings, current_language)
     set_session_label_language(current_language)
 
-    settings = load_app_settings()
-    search_cfg = settings.get("search", {}) if isinstance(settings.get("search", {}), dict) else {}
-    default_search_provider = _normalize_provider(str(search_cfg.get("provider", "serper.dev")))
+    search_cfg = load_search_settings()
+    default_search_provider = normalize_provider(str(search_cfg.get("provider", "serper.dev")))
     default_tavily_api_key = str(search_cfg.get("tavily_api_key", ""))
     default_serper_api_key = str(search_cfg.get("serper_api_key", ""))
-    default_search_num_results = _clamp_int(search_cfg.get("num_results", 5), 1, 20, 5)
-    default_search_summary_length = _normalize_summary_length(str(search_cfg.get("summary_length", "medium")))
-    default_web_search_enabled = _normalize_bool(search_cfg.get("enabled", False), default=False)
+    default_search_num_results = clamp_int(search_cfg.get("num_results", 5), 1, 20, 5)
+    default_search_summary_length = normalize_summary_length(str(search_cfg.get("summary_length", "medium")))
+    default_web_search_enabled = normalize_bool(search_cfg.get("enabled", False), default=False)
     llm_defaults = load_llm_parameters()
-    default_llm_temperature = _clamp_float(llm_defaults.get("llm_temperature", 0.8), 0.0, 1.0, 0.8)
-    default_llm_max_tokens = _clamp_int(llm_defaults.get("llm_max_tokens", 2048), 1, 131072, 2048)
-    default_llm_top_p = _clamp_float(llm_defaults.get("llm_top_p", 0.9), 0.0, 1.0, 0.9)
-    default_llm_typical_p = _clamp_float(llm_defaults.get("llm_typical_p", 0.7), 0.0, 1.0, 0.7)
-    default_llm_num_ctx = _clamp_int(llm_defaults.get("llm_num_ctx", 2048), 1, 131072, 2048)
+    default_llm_temperature = clamp_float(llm_defaults.get("llm_temperature", 0.8), 0.0, 1.0, 0.8)
+    default_llm_max_tokens = clamp_int(llm_defaults.get("llm_max_tokens", 2048), 1, 131072, 2048)
+    default_llm_top_p = clamp_float(llm_defaults.get("llm_top_p", 0.9), 0.0, 1.0, 0.9)
+    default_llm_typical_p = clamp_float(llm_defaults.get("llm_typical_p", 0.7), 0.0, 1.0, 0.7)
+    default_llm_num_ctx = clamp_int(llm_defaults.get("llm_num_ctx", 2048), 1, 131072, 2048)
 
     hosts, default_host = load_settings()
-    server_choices = [(host["server_name"], f"{host['address']}:{host['port']}") for host in hosts]
-    current_host = f"{default_host['address']}:{default_host['port']}" if default_host else None
-    models = fetch_models(default_host["address"], default_host["port"]) if default_host else []
+    server_choices = [
+        (str(host.get("server_name", "Unknown")), f"{host.get('address', 'http://127.0.0.1')}:{host.get('port', 11434)}")
+        for host in hosts
+        if isinstance(host, dict) and host.get("address")
+    ]
+    current_host = f"{default_host.get('address', '')}:{default_host.get('port', 11434)}" if default_host else None
+    models = fetch_models(default_host.get("address", ""), default_host.get("port", 11434)) if default_host else []
     initial_history = load_current_chat_history()
     session_choices, current_session_id = list_chat_session_choices()
     preset_choices, current_preset_id = list_preset_choices()
@@ -629,15 +594,42 @@ def build_demo() -> gr.Blocks:
                 button_ids.append(None)
         return button_updates, button_ids, selected_id
 
+    def _spread_session_state(state: SessionUIState) -> list:
+        d = state.as_dict()
+        return [
+            state.history, state.history,
+            d["preset_dropdown"], d["preset_name"],
+            d["persona_dropdown"], d["persona_name"], d["persona_description"],
+            d["persona_system_prompt"], d["persona_default_model"],
+            d["persona_default_preset"],
+        gr.update(value=d["model"]) if d["model"] is not None else gr.update(),
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+        ]
+
+
+    def _spread_preset_state(state: PresetUIState) -> list:
+        d = state.as_dict()
+        return [
+            d["preset_dropdown"], d["preset_name"],
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+        ]
+
+
     def handle_switch_session_button(session_id: str | None):
         button_updates, button_ids, selected_id = build_session_variant_updates(session_id)
-        result = switch_chat_session_with_state(selected_id)
-        return (*button_updates, *button_ids, selected_id, *result)
+        state, status = switch_chat_session_with_state(selected_id)
+        return (*button_updates, *button_ids, selected_id, *_spread_session_state(state), status)
 
     def handle_create_session_button():
-        result = create_new_chat_session_with_state()
+        _dropdown_update, state, status = create_new_chat_session_with_state()
         button_updates, button_ids, selected_id = build_session_button_updates(None)
-        return (*button_updates, *button_ids, selected_id, *result[1:])
+        return (*button_updates, *button_ids, selected_id, *_spread_session_state(state), status)
 
     def handle_rename_session_button(session_id: str | None, title: str):
         _dropdown_update, status = rename_chat_session(session_id, title)
@@ -645,21 +637,43 @@ def build_demo() -> gr.Blocks:
         return (*button_updates, *button_ids, selected_id, status)
 
     def handle_delete_session_button(session_id: str | None):
-        result = delete_chat_session_with_state(session_id)
+        _dropdown_update, state, status = delete_chat_session_with_state(session_id)
         button_updates, button_ids, selected_id = build_session_button_updates(None)
-        return (*button_updates, *button_ids, selected_id, *result[1:])
+        return (*button_updates, *button_ids, selected_id, *_spread_session_state(state), status)
+
+
+    def handle_apply_preset(preset_id: str | None):
+        state, status = apply_preset_to_current_session(preset_id)
+        return *_spread_preset_state(state), status
+
+
+    def handle_load_persona(persona_id: str | None):
+        state, status = load_selected_persona(persona_id)
+        d = state.as_dict()
+        return [
+            d["persona_dropdown"], d["persona_name"], d["persona_description"],
+            d["persona_system_prompt"], d["persona_default_model"],
+            d["persona_default_preset"],
+            d["preset_dropdown"],
+        gr.update(value=d["model"]) if d["model"] is not None else gr.update(),
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+            d["llm_temperature"], d["llm_max_tokens"],
+            d["llm_top_p"], d["llm_typical_p"], d["llm_num_ctx"],
+            status,
+        ]
 
     def toggle_web_search(enabled: bool):
         new_enabled = not bool(enabled)
         label = web_search_button_label(new_enabled)
         variant = "primary" if new_enabled else "secondary"
-        existing = load_app_settings()
+        existing = load_search_settings()
         existing_search = existing.get("search", {}) if isinstance(existing.get("search", {}), dict) else {}
         existing["search"] = {
             **existing_search,
             "enabled": new_enabled,
         }
-        ok = save_app_settings(existing)
+        ok = save_search_settings(existing)
         status = tr("web_search_setting_saved", "Web search setting saved.") if ok else tr("web_search_setting_failed", "Failed to save web search setting.")
         return (
             gr.update(value=new_enabled),
@@ -684,12 +698,12 @@ def build_demo() -> gr.Blocks:
         num_results: float,
         summary_length: str,
     ):
-        existing = load_app_settings()
+        existing = load_search_settings()
         existing_search = existing.get("search", {}) if isinstance(existing.get("search", {}), dict) else {}
 
-        num = _clamp_int(num_results, 1, 20, 5)
-        normalized_summary_length = _normalize_summary_length(summary_length)
-        normalized_provider = _normalize_provider(provider)
+        num = clamp_int(num_results, 1, 20, 5)
+        normalized_summary_length = normalize_summary_length(summary_length)
+        normalized_provider = normalize_provider(provider)
 
         existing["search"] = {
             "provider": normalized_provider,
@@ -701,7 +715,7 @@ def build_demo() -> gr.Blocks:
             "serper_api_url": str(existing_search.get("serper_api_url", "https://google.serper.dev/search")),
         }
 
-        ok = save_app_settings(existing)
+        ok = save_search_settings(existing)
         if ok:
             return (
                 tr("settings_saved", "Search settings saved."),
@@ -754,11 +768,11 @@ def build_demo() -> gr.Blocks:
         num_ctx: float,
     ):
         payload = {
-            "llm_temperature": _clamp_float(temperature, 0.0, 1.0, default_llm_temperature),
-            "llm_max_tokens": _clamp_int(max_tokens, 1, 131072, default_llm_max_tokens),
-            "llm_top_p": _clamp_float(top_p, 0.0, 1.0, default_llm_top_p),
-            "llm_typical_p": _clamp_float(typical_p, 0.0, 1.0, default_llm_typical_p),
-            "llm_num_ctx": _clamp_int(num_ctx, 1, 131072, default_llm_num_ctx),
+            "llm_temperature": clamp_float(temperature, 0.0, 1.0, default_llm_temperature),
+            "llm_max_tokens": clamp_int(max_tokens, 1, 131072, default_llm_max_tokens),
+            "llm_top_p": clamp_float(top_p, 0.0, 1.0, default_llm_top_p),
+            "llm_typical_p": clamp_float(typical_p, 0.0, 1.0, default_llm_typical_p),
+            "llm_num_ctx": clamp_int(num_ctx, 1, 131072, default_llm_num_ctx),
         }
 
         ok = save_llm_parameters(payload)
@@ -857,10 +871,14 @@ def build_demo() -> gr.Blocks:
                 question_input = gr.MultimodalTextbox(
                     interactive=True,
                     autoscroll=True,
-                    file_count="single",
-                    placeholder=translations.get("enter_question", "Enter your question or upload image file with question..."),
+                    file_count="multiple",
+                    placeholder=translations.get("enter_question", "Enter your question or upload files with question..."),
                     show_label=False,
-                    file_types=[".jpg", ".jpeg", ".png", ".bmp"],
+                    file_types=[
+                        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif", ".tiff",
+                        ".pdf", ".txt", ".md", ".csv", ".json", ".xml", ".yaml", ".yml", ".log",
+                        ".docx", ".xlsx", ".pptx",
+                    ],
                 )
 
                 with gr.Row(equal_height=True):
@@ -1105,7 +1123,7 @@ def build_demo() -> gr.Blocks:
 
                 with gr.Accordion(tr("advanced_accordion", "Advanced"), open=False) as advanced_accordion:
                     language_dropdown = gr.Dropdown(
-                        choices=list(language_settings["languages"].keys()),
+                        choices=list((language_settings.get("languages") or {}).keys()) if isinstance(language_settings.get("languages"), dict) else ["English"],
                         label=tr("language_label", "Language"),
                         value=current_language,
                         interactive=True,
@@ -1144,7 +1162,7 @@ def build_demo() -> gr.Blocks:
         search_provider_dropdown.change(lambda x: x, inputs=[search_provider_dropdown], outputs=[search_provider_state], queue=False)
         search_num_results_slider.change(lambda x: int(x), inputs=[search_num_results_slider], outputs=[search_num_results_state], queue=False)
         search_summary_length_dropdown.change(
-            lambda x: _normalize_summary_length(str(x)),
+            lambda x: normalize_summary_length(str(x)),
             inputs=[search_summary_length_dropdown],
             outputs=[search_summary_length_state],
             queue=False,
@@ -1256,7 +1274,7 @@ def build_demo() -> gr.Blocks:
         llm_num_ctx_view.change(lambda x: x, inputs=[llm_num_ctx_view], outputs=[llm_num_ctx], queue=False)
 
         preset_dropdown.change(
-            fn=apply_preset_to_current_session,
+            fn=handle_apply_preset,
             inputs=[preset_dropdown],
             outputs=[
                 preset_dropdown,
@@ -1299,7 +1317,7 @@ def build_demo() -> gr.Blocks:
         )
 
         persona_dropdown.change(
-            fn=load_selected_persona,
+            fn=handle_load_persona,
             inputs=[persona_dropdown],
             outputs=[
                 persona_dropdown,
@@ -1555,7 +1573,7 @@ def build_demo() -> gr.Blocks:
 
         def on_language_change(selected_language, web_search_enabled_value, settings_open_value, current_summary_length, current_session_value):
             new_translations = update_language(selected_language)
-            normalized_summary_length = _normalize_summary_length(str(current_summary_length))
+            normalized_summary_length = normalize_summary_length(str(current_summary_length))
             session_updates, _session_ids, _selected_id = build_session_button_updates(current_session_value)
             return (
                 gr.update(value=new_translations.get("title", "# Ollama WebUI")),

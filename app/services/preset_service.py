@@ -125,5 +125,6 @@ class PresetService:
             return None
         merged = dict(base_parameters or {})
         for key in ("llm_temperature", "llm_max_tokens", "llm_top_p", "llm_typical_p", "llm_num_ctx"):
-            merged[key] = preset[key]
+            if key in preset:
+                merged[key] = preset[key]
         return merged

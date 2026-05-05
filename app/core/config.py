@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from app.core.normalizers import clamp_float, clamp_int
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CONFIG_FILE = ROOT_DIR / "server_settings.json"
 LANGUAGE_FILE = ROOT_DIR / "language_settings.json"
@@ -17,27 +19,18 @@ DEFAULT_LLM_PARAMETERS: dict[str, float | int] = {
 }
 
 
-def _clamp_float(value: Any, minimum: float, maximum: float, default: float) -> float:
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(parsed, maximum))
-
-
-def _clamp_int(value: Any, minimum: int, maximum: int, default: int) -> int:
-    try:
-        parsed = int(float(value))
-    except (TypeError, ValueError):
-        parsed = default
-    return max(minimum, min(parsed, maximum))
-
-
 def load_language_settings() -> dict[str, Any]:
     if not LANGUAGE_FILE.exists():
-        raise FileNotFoundError(f"{LANGUAGE_FILE} not found.")
-    with LANGUAGE_FILE.open("r", encoding="utf-8") as f:
-        return json.load(f)
+        logging.info("%s not found, returning defaults.", LANGUAGE_FILE.name)
+        return {"default_language": "English", "languages": {}}
+
+    try:
+        with LANGUAGE_FILE.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {"default_language": "English", "languages": {}}
+    except (OSError, json.JSONDecodeError) as exc:
+        logging.error("Failed to load language settings: %s", exc)
+        return {"default_language": "English", "languages": {}}
 
 
 def save_default_language(default_language: str) -> bool:
@@ -49,6 +42,9 @@ def save_default_language(default_language: str) -> bool:
             payload = json.load(f)
     except (OSError, json.JSONDecodeError):
         return False
+
+    if not isinstance(payload, dict):
+        payload = {}
 
     payload["default_language"] = str(default_language).strip() or "English"
 
@@ -129,31 +125,31 @@ def load_llm_parameters() -> dict[str, float | int]:
         except (TypeError, ValueError):
             return default
 
-    data["llm_temperature"] = _clamp_float(
+    data["llm_temperature"] = clamp_float(
         _to_float("llm_temperature", float(DEFAULT_LLM_PARAMETERS["llm_temperature"])),
         0.0,
         1.0,
         float(DEFAULT_LLM_PARAMETERS["llm_temperature"]),
     )
-    data["llm_top_p"] = _clamp_float(
+    data["llm_top_p"] = clamp_float(
         _to_float("llm_top_p", float(DEFAULT_LLM_PARAMETERS["llm_top_p"])),
         0.0,
         1.0,
         float(DEFAULT_LLM_PARAMETERS["llm_top_p"]),
     )
-    data["llm_typical_p"] = _clamp_float(
+    data["llm_typical_p"] = clamp_float(
         _to_float("llm_typical_p", float(DEFAULT_LLM_PARAMETERS["llm_typical_p"])),
         0.0,
         1.0,
         float(DEFAULT_LLM_PARAMETERS["llm_typical_p"]),
     )
-    data["llm_max_tokens"] = _clamp_int(
+    data["llm_max_tokens"] = clamp_int(
         _to_int("llm_max_tokens", int(DEFAULT_LLM_PARAMETERS["llm_max_tokens"])),
         1,
         131072,
         int(DEFAULT_LLM_PARAMETERS["llm_max_tokens"]),
     )
-    data["llm_num_ctx"] = _clamp_int(
+    data["llm_num_ctx"] = clamp_int(
         _to_int("llm_num_ctx", int(DEFAULT_LLM_PARAMETERS["llm_num_ctx"])),
         1,
         131072,
@@ -172,31 +168,31 @@ def save_llm_parameters(parameters: dict[str, Any]) -> bool:
             config = {}
 
     payload = {
-        "llm_temperature": _clamp_float(
+        "llm_temperature": clamp_float(
             parameters.get("llm_temperature", DEFAULT_LLM_PARAMETERS["llm_temperature"]),
             0.0,
             1.0,
             float(DEFAULT_LLM_PARAMETERS["llm_temperature"]),
         ),
-        "llm_max_tokens": _clamp_int(
+        "llm_max_tokens": clamp_int(
             parameters.get("llm_max_tokens", DEFAULT_LLM_PARAMETERS["llm_max_tokens"]),
             1,
             131072,
             int(DEFAULT_LLM_PARAMETERS["llm_max_tokens"]),
         ),
-        "llm_top_p": _clamp_float(
+        "llm_top_p": clamp_float(
             parameters.get("llm_top_p", DEFAULT_LLM_PARAMETERS["llm_top_p"]),
             0.0,
             1.0,
             float(DEFAULT_LLM_PARAMETERS["llm_top_p"]),
         ),
-        "llm_typical_p": _clamp_float(
+        "llm_typical_p": clamp_float(
             parameters.get("llm_typical_p", DEFAULT_LLM_PARAMETERS["llm_typical_p"]),
             0.0,
             1.0,
             float(DEFAULT_LLM_PARAMETERS["llm_typical_p"]),
         ),
-        "llm_num_ctx": _clamp_int(
+        "llm_num_ctx": clamp_int(
             parameters.get("llm_num_ctx", DEFAULT_LLM_PARAMETERS["llm_num_ctx"]),
             1,
             131072,
@@ -212,4 +208,83 @@ def save_llm_parameters(parameters: dict[str, Any]) -> bool:
         return True
     except OSError as exc:
         logging.error("Failed to save LLM parameters: %s", exc)
+        return False
+
+
+# --- Search settings (migrated from app_settings.json) ---
+
+_DEFAULT_SEARCH: dict[str, Any] = {
+    "search": {
+        "enabled": False,
+        "provider": "serper.dev",
+        "num_results": 5,
+        "summary_length": "medium",
+        "tavily_api_key": "",
+        "serper_api_key": "",
+        "tavily_api_url": "https://api.tavily.com/search",
+        "serper_api_url": "https://google.serper.dev/search",
+    }
+}
+
+
+def _migrate_legacy_app_settings() -> None:
+    """One-time migration: merge app_settings.json search block into server_settings.json."""
+    legacy = ROOT_DIR / "app_settings.json"
+    if not legacy.exists():
+        return
+    try:
+        with legacy.open("r", encoding="utf-8-sig") as f:
+            old = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(old, dict):
+        return
+    search = old.get("search")
+    if not isinstance(search, dict):
+        return
+    config: dict[str, Any] = {}
+    if CONFIG_FILE.exists():
+        try:
+            with CONFIG_FILE.open("r", encoding="utf-8") as f:
+                config = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            config = {}
+    config.setdefault("search", {}).update(search)
+    try:
+        with CONFIG_FILE.open("w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
+        logging.info("Migrated search settings from app_settings.json to server_settings.json")
+    except OSError:
+        return
+
+
+def load_search_settings() -> dict[str, Any]:
+    _migrate_legacy_app_settings()
+    merged = dict(_DEFAULT_SEARCH["search"])
+    if CONFIG_FILE.exists():
+        try:
+            with CONFIG_FILE.open("r", encoding="utf-8") as f:
+                config = json.load(f)
+            saved = config.get("search", {})
+            if isinstance(saved, dict):
+                merged.update(saved)
+        except (OSError, json.JSONDecodeError):
+            pass
+    return merged
+
+
+def save_search_settings(search: dict[str, Any]) -> bool:
+    config: dict[str, Any] = {}
+    if CONFIG_FILE.exists():
+        try:
+            with CONFIG_FILE.open("r", encoding="utf-8") as f:
+                config = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            config = {}
+    config["search"] = search
+    try:
+        with CONFIG_FILE.open("w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
+        return True
+    except OSError:
         return False

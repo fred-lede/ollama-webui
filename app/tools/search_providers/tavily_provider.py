@@ -4,14 +4,14 @@ import os
 
 import requests
 
-from app.core.app_settings import load_app_settings
+from app.core.config import load_search_settings
 from app.core.cancellation import ensure_not_stopped
 from app.tools.search_providers.base import SearchProvider, SearchResult
 
 
 class TavilyProvider(SearchProvider):
     def __init__(self, api_key: str | None = None, timeout: int = 20) -> None:
-        settings = load_app_settings().get("search", {})
+        settings = load_search_settings()
         self.api_key = api_key or os.getenv("TAVILY_API_KEY", "") or str(settings.get("tavily_api_key", ""))
         self.timeout = timeout
         self.endpoint = (
